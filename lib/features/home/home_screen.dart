@@ -577,6 +577,9 @@ class _PhotoTimelineList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('MM-dd HH:mm');
+    final baselineDate = items
+        .map((item) => item.checkIn.checkInDate)
+        .reduce((a, b) => a.isBefore(b) ? a : b);
 
     return ListView.separated(
       itemCount: items.length + 1,
@@ -588,7 +591,7 @@ class _PhotoTimelineList extends StatelessWidget {
         final item = items[index];
         return _TimelineListItem(
           item: item,
-          dayLabel: _dayLabel(spot.createdAt, item.checkIn.checkInDate),
+          dayLabel: _dayLabel(baselineDate, item.checkIn.checkInDate),
           phaseLabel: _phaseLabel(item),
           phaseColor: _phaseColor(item),
           dateLabel: dateFormat.format(item.checkIn.checkInDate),
@@ -597,8 +600,8 @@ class _PhotoTimelineList extends StatelessWidget {
     );
   }
 
-  String _dayLabel(DateTime created, DateTime checkIn) {
-    final start = DateTime(created.year, created.month, created.day);
+  String _dayLabel(DateTime baseline, DateTime checkIn) {
+    final start = DateTime(baseline.year, baseline.month, baseline.day);
     final current = DateTime(checkIn.year, checkIn.month, checkIn.day);
     final days = current.difference(start).inDays + 1;
     return '第 $days 天';
