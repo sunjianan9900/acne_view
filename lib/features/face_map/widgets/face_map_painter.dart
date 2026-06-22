@@ -55,6 +55,23 @@ class FaceMapCoordinates {
 
   static Offset? markerRecordPosition(SpotFaceMarker marker, Size size) =>
       localFromNormalized(marker.mapX, marker.mapY, size);
+
+  /// 标记圆点半径，相对面部内容区域等比缩放。
+  static double markerRadius(
+    Size canvasSize, {
+    bool selected = false,
+    bool dragging = false,
+  }) {
+    final face = contentRect(canvasSize);
+    final base = face.shortestSide * 0.022;
+    final scale = selected || dragging ? 1.12 : 1.0;
+    return (base * scale).clamp(2.5, 12.0);
+  }
+
+  static double markerHitRadius(Size canvasSize) {
+    final visual = markerRadius(canvasSize);
+    return (visual * 2.2).clamp(10.0, 20.0);
+  }
 }
 
 class FaceMapWidget extends StatelessWidget {

@@ -134,7 +134,9 @@ class _SpotFaceMapEditorDialogState
     for (final marker in markers) {
       final position = FaceMapCoordinates.markerRecordPosition(marker, size);
       if (position == null) continue;
-      if ((position - local).distance <= 16) return marker;
+      if ((position - local).distance <= FaceMapCoordinates.markerHitRadius(size)) {
+        return marker;
+      }
     }
     return null;
   }
@@ -318,6 +320,13 @@ class _SpotFaceMapCanvasState extends State<SpotFaceMapCanvas> {
               ),
             for (final marker in widget.markers)
               _FaceMarkerDot(
+                radius: FaceMapCoordinates.markerRadius(
+                  size,
+                  selected: marker.id == widget.selectedMarkerId,
+                  dragging: marker.id == widget.draggingMarkerId,
+                ),
+                hitPadding: FaceMapCoordinates.markerHitRadius(size) -
+                    FaceMapCoordinates.markerRadius(size),
                 selected: marker.id == widget.selectedMarkerId,
                 dragging: marker.id == widget.draggingMarkerId,
                 position: FaceMapCoordinates.markerRecordPosition(
@@ -343,6 +352,8 @@ class _SpotFaceMapCanvasState extends State<SpotFaceMapCanvas> {
 
 class _FaceMarkerDot extends StatelessWidget {
   const _FaceMarkerDot({
+    required this.radius,
+    required this.hitPadding,
     required this.selected,
     required this.dragging,
     required this.position,
@@ -352,6 +363,8 @@ class _FaceMarkerDot extends StatelessWidget {
     this.onDragEnd,
   });
 
+  final double radius;
+  final double hitPadding;
   final bool selected;
   final bool dragging;
   final Offset position;
@@ -362,9 +375,12 @@ class _FaceMarkerDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = 9.0;
+    final borderWidth = (radius * 0.22).clamp(1.0, 2.5);
+    final touchRadius = interactive
+        ? (radius + hitPadding.clamp(4.0, 14.0))
+        : radius;
 
-    Widget dot = Container(
+    final dot = Container(
       width: radius * 2,
       height: radius * 2,
       decoration: BoxDecoration(
@@ -372,32 +388,38 @@ class _FaceMarkerDot extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(
           color: selected ? Colors.white : AppTheme.accentCoral,
-          width: selected ? 2.5 : 1.5,
+          width: borderWidth,
         ),
         boxShadow: [
           if (selected || dragging)
             BoxShadow(
-              color: AppTheme.accentCoral.withValues(alpha: 0.45),
-              blurRadius: 10,
-              spreadRadius: 1,
+              color: AppTheme.accentCoral.withValues(alpha: 0.4),
+              blurRadius: radius * 1.2,
+              spreadRadius: radius * 0.08,
             ),
         ],
       ),
     );
 
+    Widget body = SizedBox(
+      width: touchRadius * 2,
+      height: touchRadius * 2,
+      child: Center(child: dot),
+    );
+
     if (interactive) {
-      dot = GestureDetector(
+      body = GestureDetector(
         onPanStart: (_) => onDragStart?.call(),
         onPanUpdate: (details) => onDragUpdate?.call(details.globalPosition),
         onPanEnd: (_) => onDragEnd?.call(),
-        child: dot,
+        child: body,
       );
     }
 
     return Positioned(
-      left: position.dx - radius,
-      top: position.dy - radius,
-      child: dot,
+      left: position.dx - touchRadius,
+      top: position.dy - touchRadius,
+      child: body,
     );
   }
 }
