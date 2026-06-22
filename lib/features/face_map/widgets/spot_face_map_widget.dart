@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/database.dart';
 import '../../../core/providers/repositories.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/models/face_map_marker_data.dart';
 import '../../../shared/models/face_marker_size.dart';
 import 'face_map_painter.dart';
 
@@ -51,7 +52,7 @@ class SpotFaceMapPreview extends ConsumerWidget {
             padding: const EdgeInsets.all(10),
             child: markersAsync.when(
               data: (markers) => SpotFaceMapCanvas(
-                markers: markers,
+                markers: markers.map(FaceMapMarkerData.fromSpot).toList(),
                 interactive: false,
               ),
               loading: () => const Center(
@@ -130,19 +131,18 @@ class _SpotFaceMapEditorDialogState
     );
   }
 
-  SpotFaceMarker? _hitTestMarker(
-    List<SpotFaceMarker> markers,
+  FaceMapMarkerData? _hitTestMarker(
+    List<FaceMapMarkerData> markers,
     Offset local,
     Size size,
   ) {
     for (final marker in markers) {
-      final markerSize = FaceMarkerSize.fromId(marker.size);
+      final markerSize = marker.size;
       final position = FaceMapCoordinates.markerRecordPosition(
         marker.mapX,
         marker.mapY,
         size,
       );
-      if (position == null) continue;
       final hitRadius = FaceMapCoordinates.markerHitRadius(
         size,
         markerSize: markerSize,
@@ -153,10 +153,11 @@ class _SpotFaceMapEditorDialogState
   }
 
   Future<void> _handleTap(
-    List<SpotFaceMarker> markers,
+    List<SpotFaceMarker> records,
     Offset local,
     Size size,
   ) async {
+    final markers = records.map(FaceMapMarkerData.fromSpot).toList();
     final normalized = FaceMapCoordinates.normalizedFromLocal(local, size);
     if (normalized == null) return;
 
@@ -230,7 +231,7 @@ class _SpotFaceMapEditorDialogState
               Expanded(
                 child: markersAsync.when(
                   data: (markers) => SpotFaceMapCanvas(
-                    markers: markers,
+                    markers: markers.map(FaceMapMarkerData.fromSpot).toList(),
                     selectedMarkerId: _selectedMarkerId,
                     draggingMarkerId: _draggingMarkerId,
                     interactive: true,
@@ -306,7 +307,7 @@ class SpotFaceMapCanvas extends StatefulWidget {
     this.onMarkerDragEnd,
   });
 
-  final List<SpotFaceMarker> markers;
+  final List<FaceMapMarkerData> markers;
   final bool interactive;
   final String? selectedMarkerId;
   final String? draggingMarkerId;
@@ -357,17 +358,17 @@ class _SpotFaceMapCanvasState extends State<SpotFaceMapCanvas> {
               _FaceMarkerDot(
                 radius: FaceMapCoordinates.markerRadius(
                   size,
-                  markerSize: FaceMarkerSize.fromId(marker.size),
+                  markerSize: marker.size,
                   selected: marker.id == widget.selectedMarkerId,
                   dragging: marker.id == widget.draggingMarkerId,
                 ),
                 hitPadding: FaceMapCoordinates.markerHitRadius(
                   size,
-                  markerSize: FaceMarkerSize.fromId(marker.size),
+                  markerSize: marker.size,
                 ) -
                     FaceMapCoordinates.markerRadius(
                       size,
-                      markerSize: FaceMarkerSize.fromId(marker.size),
+                      markerSize: marker.size,
                     ),
                 selected: marker.id == widget.selectedMarkerId,
                 dragging: marker.id == widget.draggingMarkerId,
@@ -375,7 +376,7 @@ class _SpotFaceMapCanvasState extends State<SpotFaceMapCanvas> {
                   marker.mapX,
                   marker.mapY,
                   size,
-                )!,
+                ),
                 interactive: widget.interactive,
                 onDragStart: () =>
                     widget.onMarkerDragStart?.call(marker.id),

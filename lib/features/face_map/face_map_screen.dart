@@ -94,7 +94,7 @@ class _FaceMapScreenState extends ConsumerState<FaceMapScreen> {
     setState(() => _highlightedSpotId = spotId);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('痘痘已创建，可在概览页标记拍照位置')));
+    ).showSnackBar(const SnackBar(content: Text('痘痘已创建')));
   }
 }
 
