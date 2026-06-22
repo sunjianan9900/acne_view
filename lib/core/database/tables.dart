@@ -21,6 +21,8 @@ class SpotFaceMarkers extends Table {
   TextColumn get spotId => text().references(AcneSpots, #id)();
   RealColumn get mapX => real()();
   RealColumn get mapY => real()();
+  TextColumn get size =>
+      text().withDefault(const Constant('large'))();
 
   @override
   Set<Column> get primaryKey => {id};

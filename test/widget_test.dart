@@ -10,6 +10,7 @@ import 'package:acne_view/core/providers/repositories.dart';
 import 'package:acne_view/features/face_map/widgets/aggregated_face_map_widget.dart';
 import 'package:acne_view/features/face_map/widgets/face_map_painter.dart';
 import 'package:acne_view/features/home/spot_detail_dialog.dart';
+import 'package:acne_view/shared/models/face_marker_size.dart';
 import 'package:acne_view/shared/models/placed_spot_marker.dart';
 import 'package:acne_view/shared/models/face_region.dart';
 import 'package:acne_view/shared/models/spot_status.dart';
@@ -49,7 +50,12 @@ class _SpySpotRepository implements AcneSpotRepository {
       Stream<List<SpotFaceMarker>>.value(const []);
 
   @override
-  Future<String> addFaceMarker(String spotId, double x, double y) async =>
+  Future<String> addFaceMarker(
+    String spotId,
+    double x,
+    double y, {
+    FaceMarkerSize size = FaceMarkerSize.large,
+  }) async =>
       'marker-fake';
 
   @override
@@ -171,6 +177,7 @@ void main() {
       spotId: 'spot-1',
       mapX: 0.5,
       mapY: 0.25,
+      size: FaceMarkerSize.large.id,
     );
     final placed = [PlacedSpotMarker(marker: marker, spot: spots.first)];
 

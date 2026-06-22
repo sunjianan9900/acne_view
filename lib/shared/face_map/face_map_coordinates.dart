@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import '../models/face_marker_size.dart';
+
 /// 面部地图归一化坐标：相对 `BoxFit.contain` 渲染后的图片区域 (0–1)。
 class FaceMapCoordinates {
   FaceMapCoordinates._();
@@ -69,17 +71,21 @@ class FaceMapCoordinates {
 
   static double markerRadius(
     Size canvasSize, {
+    FaceMarkerSize markerSize = FaceMarkerSize.large,
     bool selected = false,
     bool dragging = false,
   }) {
     final image = imageRect(canvasSize);
-    final base = image.shortestSide * 0.022;
+    final base = image.shortestSide * markerSize.scaleFactor;
     final scale = selected || dragging ? 1.12 : 1.0;
     return (base * scale).clamp(2.0, 14.0);
   }
 
-  static double markerHitRadius(Size canvasSize) {
-    final visual = markerRadius(canvasSize);
+  static double markerHitRadius(
+    Size canvasSize, {
+    FaceMarkerSize markerSize = FaceMarkerSize.large,
+  }) {
+    final visual = markerRadius(canvasSize, markerSize: markerSize);
     return (visual * 2.2).clamp(10.0, 22.0);
   }
 

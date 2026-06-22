@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/database.dart';
 import '../../../core/providers/repositories.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/models/face_marker_size.dart';
 import 'face_map_painter.dart';
 
 /// 当前痘痘项目独立的面部位置预览，点击打开大图编辑器。
@@ -92,18 +93,21 @@ class SpotFaceMapEditorDialog extends ConsumerStatefulWidget {
 
 class _SpotFaceMapEditorDialogState
     extends ConsumerState<SpotFaceMapEditorDialog> {
-  bool _addMode = false;
+  FaceMarkerSize? _pendingAddSize;
   String? _selectedMarkerId;
   String? _draggingMarkerId;
 
-  Future<void> _addMarker(double x, double y) async {
-    final id = await ref
-        .read(spotRepositoryProvider)
-        .addFaceMarker(widget.spotId, x, y);
+  Future<void> _addMarker(double x, double y, FaceMarkerSize size) async {
+    final id = await ref.read(spotRepositoryProvider).addFaceMarker(
+      widget.spotId,
+      x,
+      y,
+      size: size,
+    );
     if (!mounted) return;
     setState(() {
       _selectedMarkerId = id;
-      _addMode = false;
+      _pendingAddSize = null;
     });
   }
 
@@ -132,15 +136,18 @@ class _SpotFaceMapEditorDialogState
     Size size,
   ) {
     for (final marker in markers) {
+      final markerSize = FaceMarkerSize.fromId(marker.size);
       final position = FaceMapCoordinates.markerRecordPosition(
         marker.mapX,
         marker.mapY,
         size,
       );
       if (position == null) continue;
-      if ((position - local).distance <= FaceMapCoordinates.markerHitRadius(size)) {
-        return marker;
-      }
+      final hitRadius = FaceMapCoordinates.markerHitRadius(
+        size,
+        markerSize: markerSize,
+      );
+      if ((position - local).distance <= hitRadius) return marker;
     }
     return null;
   }
@@ -155,16 +162,31 @@ class _SpotFaceMapEditorDialogState
 
     final hit = _hitTestMarker(markers, local, size);
     if (hit != null) {
-      setState(() => _selectedMarkerId = hit.id);
+      setState(() {
+        _selectedMarkerId = hit.id;
+        _pendingAddSize = null;
+      });
       return;
     }
 
-    if (_addMode) {
-      await _addMarker(normalized.dx, normalized.dy);
-      return;
-    }
+    final pending = _pendingAddSize;
+    if (pending == null) return;
 
-    await _addMarker(normalized.dx, normalized.dy);
+    await _addMarker(normalized.dx, normalized.dy, pending);
+  }
+
+  void _toggleAddSize(FaceMarkerSize size) {
+    setState(() {
+      _pendingAddSize = _pendingAddSize == size ? null : size;
+    });
+  }
+
+  String _hintText() {
+    final pending = _pendingAddSize;
+    if (pending != null) {
+      return '点击面部添加${pending.label}';
+    }
+    return '选择下方大小后点击面部添加，拖动可调整位置';
   }
 
   @override
@@ -199,9 +221,7 @@ class _SpotFaceMapEditorDialogState
                 ],
               ),
               Text(
-                _addMode
-                    ? '点击面部添加标记'
-                    : '拖动标记调整位置，点击空白处也可添加',
+                _hintText(),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppTheme.textSecondary,
                 ),
@@ -220,7 +240,7 @@ class _SpotFaceMapEditorDialogState
                       setState(() {
                         _draggingMarkerId = markerId;
                         _selectedMarkerId = markerId;
-                        _addMode = false;
+                        _pendingAddSize = null;
                       });
                     },
                     onMarkerDragUpdate: (markerId, local, size) {
@@ -238,7 +258,11 @@ class _SpotFaceMapEditorDialogState
                 ),
               ),
               const SizedBox(height: 12),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   if (_selectedMarkerId != null)
                     OutlinedButton.icon(
@@ -246,12 +270,19 @@ class _SpotFaceMapEditorDialogState
                       icon: const Icon(Icons.remove_circle_outline, size: 18),
                       label: const Text('移除标记'),
                     ),
-                  const Spacer(),
-                  FilledButton.tonalIcon(
-                    onPressed: () => setState(() => _addMode = !_addMode),
-                    icon: Icon(_addMode ? Icons.close : Icons.add),
-                    label: Text(_addMode ? '取消添加' : '添加标记'),
-                  ),
+                  for (final size in FaceMarkerSize.values)
+                    FilledButton.tonal(
+                      onPressed: () => _toggleAddSize(size),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _pendingAddSize == size
+                            ? AppTheme.softRose
+                            : null,
+                        foregroundColor: _pendingAddSize == size
+                            ? AppTheme.brandPink
+                            : null,
+                      ),
+                      child: Text('添加${size.label}'),
+                    ),
                 ],
               ),
             ],
@@ -326,11 +357,18 @@ class _SpotFaceMapCanvasState extends State<SpotFaceMapCanvas> {
               _FaceMarkerDot(
                 radius: FaceMapCoordinates.markerRadius(
                   size,
+                  markerSize: FaceMarkerSize.fromId(marker.size),
                   selected: marker.id == widget.selectedMarkerId,
                   dragging: marker.id == widget.draggingMarkerId,
                 ),
-                hitPadding: FaceMapCoordinates.markerHitRadius(size) -
-                    FaceMapCoordinates.markerRadius(size),
+                hitPadding: FaceMapCoordinates.markerHitRadius(
+                  size,
+                  markerSize: FaceMarkerSize.fromId(marker.size),
+                ) -
+                    FaceMapCoordinates.markerRadius(
+                      size,
+                      markerSize: FaceMarkerSize.fromId(marker.size),
+                    ),
                 selected: marker.id == widget.selectedMarkerId,
                 dragging: marker.id == widget.draggingMarkerId,
                 position: FaceMapCoordinates.markerRecordPosition(

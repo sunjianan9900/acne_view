@@ -554,8 +554,18 @@ class $SpotFaceMarkersTable extends SpotFaceMarkers
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _sizeMeta = const VerificationMeta('size');
   @override
-  List<GeneratedColumn> get $columns => [id, spotId, mapX, mapY];
+  late final GeneratedColumn<String> size = GeneratedColumn<String>(
+    'size',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('large'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, spotId, mapX, mapY, size];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -597,6 +607,12 @@ class $SpotFaceMarkersTable extends SpotFaceMarkers
     } else if (isInserting) {
       context.missing(_mapYMeta);
     }
+    if (data.containsKey('size')) {
+      context.handle(
+        _sizeMeta,
+        size.isAcceptableOrUnknown(data['size']!, _sizeMeta),
+      );
+    }
     return context;
   }
 
@@ -622,6 +638,10 @@ class $SpotFaceMarkersTable extends SpotFaceMarkers
         DriftSqlType.double,
         data['${effectivePrefix}map_y'],
       )!,
+      size: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}size'],
+      )!,
     );
   }
 
@@ -636,11 +656,13 @@ class SpotFaceMarker extends DataClass implements Insertable<SpotFaceMarker> {
   final String spotId;
   final double mapX;
   final double mapY;
+  final String size;
   const SpotFaceMarker({
     required this.id,
     required this.spotId,
     required this.mapX,
     required this.mapY,
+    required this.size,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -649,6 +671,7 @@ class SpotFaceMarker extends DataClass implements Insertable<SpotFaceMarker> {
     map['spot_id'] = Variable<String>(spotId);
     map['map_x'] = Variable<double>(mapX);
     map['map_y'] = Variable<double>(mapY);
+    map['size'] = Variable<String>(size);
     return map;
   }
 
@@ -658,6 +681,7 @@ class SpotFaceMarker extends DataClass implements Insertable<SpotFaceMarker> {
       spotId: Value(spotId),
       mapX: Value(mapX),
       mapY: Value(mapY),
+      size: Value(size),
     );
   }
 
@@ -671,6 +695,7 @@ class SpotFaceMarker extends DataClass implements Insertable<SpotFaceMarker> {
       spotId: serializer.fromJson<String>(json['spotId']),
       mapX: serializer.fromJson<double>(json['mapX']),
       mapY: serializer.fromJson<double>(json['mapY']),
+      size: serializer.fromJson<String>(json['size']),
     );
   }
   @override
@@ -681,6 +706,7 @@ class SpotFaceMarker extends DataClass implements Insertable<SpotFaceMarker> {
       'spotId': serializer.toJson<String>(spotId),
       'mapX': serializer.toJson<double>(mapX),
       'mapY': serializer.toJson<double>(mapY),
+      'size': serializer.toJson<String>(size),
     };
   }
 
@@ -689,11 +715,13 @@ class SpotFaceMarker extends DataClass implements Insertable<SpotFaceMarker> {
     String? spotId,
     double? mapX,
     double? mapY,
+    String? size,
   }) => SpotFaceMarker(
     id: id ?? this.id,
     spotId: spotId ?? this.spotId,
     mapX: mapX ?? this.mapX,
     mapY: mapY ?? this.mapY,
+    size: size ?? this.size,
   );
   SpotFaceMarker copyWithCompanion(SpotFaceMarkersCompanion data) {
     return SpotFaceMarker(
@@ -701,6 +729,7 @@ class SpotFaceMarker extends DataClass implements Insertable<SpotFaceMarker> {
       spotId: data.spotId.present ? data.spotId.value : this.spotId,
       mapX: data.mapX.present ? data.mapX.value : this.mapX,
       mapY: data.mapY.present ? data.mapY.value : this.mapY,
+      size: data.size.present ? data.size.value : this.size,
     );
   }
 
@@ -710,13 +739,14 @@ class SpotFaceMarker extends DataClass implements Insertable<SpotFaceMarker> {
           ..write('id: $id, ')
           ..write('spotId: $spotId, ')
           ..write('mapX: $mapX, ')
-          ..write('mapY: $mapY')
+          ..write('mapY: $mapY, ')
+          ..write('size: $size')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, spotId, mapX, mapY);
+  int get hashCode => Object.hash(id, spotId, mapX, mapY, size);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -724,7 +754,8 @@ class SpotFaceMarker extends DataClass implements Insertable<SpotFaceMarker> {
           other.id == this.id &&
           other.spotId == this.spotId &&
           other.mapX == this.mapX &&
-          other.mapY == this.mapY);
+          other.mapY == this.mapY &&
+          other.size == this.size);
 }
 
 class SpotFaceMarkersCompanion extends UpdateCompanion<SpotFaceMarker> {
@@ -732,12 +763,14 @@ class SpotFaceMarkersCompanion extends UpdateCompanion<SpotFaceMarker> {
   final Value<String> spotId;
   final Value<double> mapX;
   final Value<double> mapY;
+  final Value<String> size;
   final Value<int> rowid;
   const SpotFaceMarkersCompanion({
     this.id = const Value.absent(),
     this.spotId = const Value.absent(),
     this.mapX = const Value.absent(),
     this.mapY = const Value.absent(),
+    this.size = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SpotFaceMarkersCompanion.insert({
@@ -745,6 +778,7 @@ class SpotFaceMarkersCompanion extends UpdateCompanion<SpotFaceMarker> {
     required String spotId,
     required double mapX,
     required double mapY,
+    this.size = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        spotId = Value(spotId),
@@ -755,6 +789,7 @@ class SpotFaceMarkersCompanion extends UpdateCompanion<SpotFaceMarker> {
     Expression<String>? spotId,
     Expression<double>? mapX,
     Expression<double>? mapY,
+    Expression<String>? size,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -762,6 +797,7 @@ class SpotFaceMarkersCompanion extends UpdateCompanion<SpotFaceMarker> {
       if (spotId != null) 'spot_id': spotId,
       if (mapX != null) 'map_x': mapX,
       if (mapY != null) 'map_y': mapY,
+      if (size != null) 'size': size,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -771,6 +807,7 @@ class SpotFaceMarkersCompanion extends UpdateCompanion<SpotFaceMarker> {
     Value<String>? spotId,
     Value<double>? mapX,
     Value<double>? mapY,
+    Value<String>? size,
     Value<int>? rowid,
   }) {
     return SpotFaceMarkersCompanion(
@@ -778,6 +815,7 @@ class SpotFaceMarkersCompanion extends UpdateCompanion<SpotFaceMarker> {
       spotId: spotId ?? this.spotId,
       mapX: mapX ?? this.mapX,
       mapY: mapY ?? this.mapY,
+      size: size ?? this.size,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -797,6 +835,9 @@ class SpotFaceMarkersCompanion extends UpdateCompanion<SpotFaceMarker> {
     if (mapY.present) {
       map['map_y'] = Variable<double>(mapY.value);
     }
+    if (size.present) {
+      map['size'] = Variable<String>(size.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -810,6 +851,7 @@ class SpotFaceMarkersCompanion extends UpdateCompanion<SpotFaceMarker> {
           ..write('spotId: $spotId, ')
           ..write('mapX: $mapX, ')
           ..write('mapY: $mapY, ')
+          ..write('size: $size, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2375,6 +2417,7 @@ typedef $$SpotFaceMarkersTableCreateCompanionBuilder =
       required String spotId,
       required double mapX,
       required double mapY,
+      Value<String> size,
       Value<int> rowid,
     });
 typedef $$SpotFaceMarkersTableUpdateCompanionBuilder =
@@ -2383,6 +2426,7 @@ typedef $$SpotFaceMarkersTableUpdateCompanionBuilder =
       Value<String> spotId,
       Value<double> mapX,
       Value<double> mapY,
+      Value<String> size,
       Value<int> rowid,
     });
 
@@ -2437,6 +2481,11 @@ class $$SpotFaceMarkersTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get size => $composableBuilder(
+    column: $table.size,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$AcneSpotsTableFilterComposer get spotId {
     final $$AcneSpotsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -2485,6 +2534,11 @@ class $$SpotFaceMarkersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get size => $composableBuilder(
+    column: $table.size,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$AcneSpotsTableOrderingComposer get spotId {
     final $$AcneSpotsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2526,6 +2580,9 @@ class $$SpotFaceMarkersTableAnnotationComposer
 
   GeneratedColumn<double> get mapY =>
       $composableBuilder(column: $table.mapY, builder: (column) => column);
+
+  GeneratedColumn<String> get size =>
+      $composableBuilder(column: $table.size, builder: (column) => column);
 
   $$AcneSpotsTableAnnotationComposer get spotId {
     final $$AcneSpotsTableAnnotationComposer composer = $composerBuilder(
@@ -2585,12 +2642,14 @@ class $$SpotFaceMarkersTableTableManager
                 Value<String> spotId = const Value.absent(),
                 Value<double> mapX = const Value.absent(),
                 Value<double> mapY = const Value.absent(),
+                Value<String> size = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SpotFaceMarkersCompanion(
                 id: id,
                 spotId: spotId,
                 mapX: mapX,
                 mapY: mapY,
+                size: size,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2599,12 +2658,14 @@ class $$SpotFaceMarkersTableTableManager
                 required String spotId,
                 required double mapX,
                 required double mapY,
+                Value<String> size = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SpotFaceMarkersCompanion.insert(
                 id: id,
                 spotId: spotId,
                 mapX: mapX,
                 mapY: mapY,
+                size: size,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

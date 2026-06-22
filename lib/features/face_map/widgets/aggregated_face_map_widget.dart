@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/database/database.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/models/face_marker_size.dart';
 import '../../../shared/models/placed_spot_marker.dart';
 import '../../../shared/models/spot_status.dart';
 import 'face_map_painter.dart';
@@ -37,6 +38,7 @@ class AggregatedFaceMapWidget extends StatelessWidget {
             for (final placed in placedMarkers)
               _AggregatedMarkerDot(
                 color: _markerColor(placed.spot),
+                markerSize: FaceMarkerSize.fromId(placed.marker.size),
                 highlighted: placed.spot.id == highlightedSpotId,
                 position: FaceMapCoordinates.markerRecordPosition(
                   placed.marker.mapX,
@@ -62,6 +64,7 @@ class AggregatedFaceMapWidget extends StatelessWidget {
 class _AggregatedMarkerDot extends StatelessWidget {
   const _AggregatedMarkerDot({
     required this.color,
+    required this.markerSize,
     required this.highlighted,
     required this.position,
     required this.onTap,
@@ -69,6 +72,7 @@ class _AggregatedMarkerDot extends StatelessWidget {
   });
 
   final Color color;
+  final FaceMarkerSize markerSize;
   final bool highlighted;
   final Offset position;
   final VoidCallback onTap;
@@ -78,9 +82,13 @@ class _AggregatedMarkerDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final radius = FaceMapCoordinates.markerRadius(
       canvasSize,
+      markerSize: markerSize,
       selected: highlighted,
     );
-    final hitRadius = FaceMapCoordinates.markerHitRadius(canvasSize);
+    final hitRadius = FaceMapCoordinates.markerHitRadius(
+      canvasSize,
+      markerSize: markerSize,
+    );
     final borderWidth = (radius * 0.22).clamp(1.0, 2.5);
 
     return Positioned(

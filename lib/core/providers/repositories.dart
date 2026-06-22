@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/database.dart';
+import '../../shared/models/face_marker_size.dart';
 import '../../shared/models/face_region.dart';
 import '../../shared/models/placed_spot_marker.dart';
 import '../../shared/models/photo_source.dart';
@@ -41,7 +42,12 @@ class AcneSpotRepository {
   Stream<List<SpotFaceMarker>> watchFaceMarkers(String spotId) =>
       _db.watchFaceMarkersForSpot(spotId);
 
-  Future<String> addFaceMarker(String spotId, double x, double y) async {
+  Future<String> addFaceMarker(
+    String spotId,
+    double x,
+    double y, {
+    FaceMarkerSize size = FaceMarkerSize.large,
+  }) async {
     final id = _uuid.v4();
     await _db.insertFaceMarker(
       SpotFaceMarkersCompanion.insert(
@@ -49,6 +55,7 @@ class AcneSpotRepository {
         spotId: spotId,
         mapX: x,
         mapY: y,
+        size: Value(size.id),
       ),
     );
     return id;

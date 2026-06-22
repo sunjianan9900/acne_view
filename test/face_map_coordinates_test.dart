@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:acne_view/shared/models/face_marker_size.dart';
 import 'package:acne_view/shared/face_map/face_map_coordinates.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -42,6 +43,24 @@ void main() {
 
     expect(previewRatio.dx, closeTo(editorRatio.dx, 0.0001));
     expect(previewRatio.dy, closeTo(editorRatio.dy, 0.0001));
+  });
+
+  test('marker radius scales with marker size tier', () {
+    const canvas = Size(520, 560);
+    final large = FaceMapCoordinates.markerRadius(
+      canvas,
+      markerSize: FaceMarkerSize.large,
+    );
+    final medium = FaceMapCoordinates.markerRadius(
+      canvas,
+      markerSize: FaceMarkerSize.medium,
+    );
+    final small = FaceMapCoordinates.markerRadius(
+      canvas,
+      markerSize: FaceMarkerSize.small,
+    );
+    expect(large, greaterThan(medium));
+    expect(medium, greaterThan(small));
   });
 
   test('marker radius scales with rendered image size', () {
