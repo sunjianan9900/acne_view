@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -346,81 +347,105 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
         final selectedItem = _resolveSelectedItem(items);
         final currentIndex = _resolveTimelineIndex(items);
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    flex: 62,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: _HeroPhotoPanel(
-                            spot: spot,
-                            selectedItem: selectedItem,
-                            onPrevious: currentIndex > 0
-                                ? () => _selectCheckIn(
-                                    items[currentIndex - 1].checkIn.id,
-                                    direction: -1,
-                                  )
-                                : null,
-                            onNext: currentIndex < items.length - 1
-                                ? () => _selectCheckIn(
-                                    items[currentIndex + 1].checkIn.id,
-                                    direction: 1,
-                                  )
-                                : null,
-                            onOpenImage: () {
-                              final filePath = selectedItem?.photo?.filePath;
-                              if (filePath == null) return;
-                              showPhotoViewer(context, filePath);
-                            },
-                            direction: _pageDirection,
-                          ),
+        return CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
+              if (currentIndex > 0) {
+                _selectCheckIn(
+                  items[currentIndex - 1].checkIn.id,
+                  direction: -1,
+                );
+              }
+            },
+            const SingleActivator(LogicalKeyboardKey.arrowRight): () {
+              if (currentIndex < items.length - 1) {
+                _selectCheckIn(
+                  items[currentIndex + 1].checkIn.id,
+                  direction: 1,
+                );
+              }
+            },
+          },
+          child: Focus(
+            autofocus: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        flex: 62,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: _HeroPhotoPanel(
+                                spot: spot,
+                                selectedItem: selectedItem,
+                                onPrevious: currentIndex > 0
+                                    ? () => _selectCheckIn(
+                                        items[currentIndex - 1].checkIn.id,
+                                        direction: -1,
+                                      )
+                                    : null,
+                                onNext: currentIndex < items.length - 1
+                                    ? () => _selectCheckIn(
+                                        items[currentIndex + 1].checkIn.id,
+                                        direction: 1,
+                                      )
+                                    : null,
+                                onOpenImage: () {
+                                  final filePath =
+                                      selectedItem?.photo?.filePath;
+                                  if (filePath == null) return;
+                                  showPhotoViewer(context, filePath);
+                                },
+                                direction: _pageDirection,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            _TimelineStrip(
+                              items: items,
+                              currentIndex: currentIndex,
+                              onPrevious: currentIndex > 0
+                                  ? () => _selectCheckIn(
+                                      items[currentIndex - 1].checkIn.id,
+                                      direction: -1,
+                                    )
+                                  : null,
+                              onNext: currentIndex < items.length - 1
+                                  ? () => _selectCheckIn(
+                                      items[currentIndex + 1].checkIn.id,
+                                      direction: 1,
+                                    )
+                                  : null,
+                              onItemTap: (checkInId, index) {
+                                _selectCheckIn(
+                                  checkInId,
+                                  direction: index > currentIndex ? 1 : -1,
+                                );
+                              },
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 18),
-                        _TimelineStrip(
-                          items: items,
-                          currentIndex: currentIndex,
-                          onPrevious: currentIndex > 0
-                              ? () => _selectCheckIn(
-                                  items[currentIndex - 1].checkIn.id,
-                                  direction: -1,
-                                )
-                              : null,
-                          onNext: currentIndex < items.length - 1
-                              ? () => _selectCheckIn(
-                                  items[currentIndex + 1].checkIn.id,
-                                  direction: 1,
-                                )
-                              : null,
-                          onItemTap: (checkInId, index) {
-                            _selectCheckIn(
-                              checkInId,
-                              direction: index > currentIndex ? 1 : -1,
-                            );
-                          },
+                      ),
+                      const SizedBox(width: 22),
+                      Expanded(
+                        flex: 38,
+                        child: _DetailStack(
+                          spot: spot,
+                          selectedItem: selectedItem,
+                          onEditNote: () => _showEditNoteDialog(spot),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 22),
-                  Expanded(
-                    flex: 38,
-                    child: _DetailStack(
-                      spot: spot,
-                      selectedItem: selectedItem,
-                      onEditNote: () => _showEditNoteDialog(spot),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
