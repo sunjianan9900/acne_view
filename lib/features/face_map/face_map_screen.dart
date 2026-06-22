@@ -7,6 +7,7 @@ import '../../core/database/database.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/face_region.dart';
+import '../../shared/models/spot_display.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/widgets/douji_shell.dart';
 import 'add_spot_dialog.dart';
@@ -41,18 +42,16 @@ class _FaceMapScreenState extends ConsumerState<FaceMapScreen> {
       ],
       rightPanel: isDesktop
           ? _selectedRegion == null
-                ? allSpots.when(
-                    data: (spots) => _SpotListPanel(spots: spots),
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('加载失败: $e')),
-                  )
-                : RegionSpotsContent(
-                    region: _selectedRegion!,
-                    onClearSelection: () =>
-                        setState(() => _selectedRegion = null),
-                    showHeader: true,
-                  )
+              ? allSpots.when(
+                  data: (spots) => _SpotListPanel(spots: spots),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('加载失败: $e')),
+                )
+              : RegionSpotsContent(
+                  region: _selectedRegion!,
+                  onClearSelection: () => setState(() => _selectedRegion = null),
+                  showHeader: true,
+                )
           : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -188,7 +187,6 @@ class _SpotListPanel extends StatelessWidget {
                       separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final spot = spots[index];
-                        final region = FaceRegion.fromId(spot.faceRegion);
                         final status = SpotStatus.fromId(spot.status);
                         return InkWell(
                           borderRadius: BorderRadius.circular(12),
@@ -227,7 +225,7 @@ class _SpotListPanel extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        region?.label ?? spot.faceRegion,
+                                        spotDisplayTitle(spot),
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium
@@ -236,7 +234,7 @@ class _SpotListPanel extends StatelessWidget {
                                             ),
                                       ),
                                       Text(
-                                        '创建于 ${dateFormat.format(spot.createdAt)}',
+                                        '区域 ${spotRegionLabel(spot)} · 创建于 ${dateFormat.format(spot.createdAt)}',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall

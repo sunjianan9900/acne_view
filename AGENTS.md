@@ -19,3 +19,8 @@ If you're using Codex or another agent-capable tool, additional project-scoped h
 Managed by Trellis. Edits outside this block are preserved; edits inside may be overwritten by a future `trellis update`.
 
 <!-- TRELLIS:END -->
+
+## 项目全局规则
+
+- 每次完成一个任务或一组代码改动后，必须只对对应文件执行 `git add`，并立刻提交 `git commit`。
+- 提交信息必须使用中文，简短清晰，概括本次改动。

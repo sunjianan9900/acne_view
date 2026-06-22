@@ -7,8 +7,10 @@ import '../../core/database/database.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/face_region.dart';
+import '../../shared/models/spot_display.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/photo/add_photo_flow.dart';
+import 'add_spot_dialog.dart';
 
 class RegionSpotsScreen extends ConsumerWidget {
   const RegionSpotsScreen({super.key, required this.regionId});
@@ -41,11 +43,11 @@ class RegionSpotsScreen extends ConsumerWidget {
     WidgetRef ref,
     FaceRegion region,
   ) async {
-    await ref.read(spotRepositoryProvider).createSpot(region: region);
+    final spotId = await showAddSpotDialog(context, ref, initialRegion: region);
+    if (spotId == null || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('痘痘已创建')));
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('痘痘已创建')));
+      context.go('/timeline/$spotId');
     }
   }
 }
@@ -188,9 +190,16 @@ class _SpotCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${region.label} · ${status.label}',
+                      spotDisplaySummary(spot),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '区域：${region.label}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 4),

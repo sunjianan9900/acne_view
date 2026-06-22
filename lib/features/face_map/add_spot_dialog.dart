@@ -27,6 +27,7 @@ class AddSpotDialog extends ConsumerStatefulWidget {
 
 class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
   late FaceRegion _selected;
+  final _titleController = TextEditingController();
   final _noteController = TextEditingController();
   bool _saving = false;
 
@@ -38,6 +39,7 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
 
   @override
   void dispose() {
+    _titleController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -47,7 +49,11 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
     try {
       final spotId = await ref
           .read(spotRepositoryProvider)
-          .createSpot(region: _selected, note: _noteController.text);
+          .createSpot(
+            region: _selected,
+            title: _titleController.text,
+            note: _noteController.text,
+          );
       if (mounted) {
         Navigator.of(context).pop(spotId);
       }
@@ -93,6 +99,15 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
                 ],
               ),
               const SizedBox(height: 8),
+              TextField(
+                controller: _titleController,
+                enabled: !_saving,
+                decoration: const InputDecoration(
+                  labelText: '标题（可选）',
+                  hintText: '例如：额头新痘',
+                ),
+              ),
+              const SizedBox(height: 12),
               DropdownButtonFormField<FaceRegion>(
                 initialValue: _selected,
                 decoration: const InputDecoration(labelText: '面部区域'),

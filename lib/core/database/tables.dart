@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 class AcneSpots extends Table {
   TextColumn get id => text()();
+  TextColumn get title => text().withDefault(const Constant(''))();
   TextColumn get faceRegion => text()();
   DateTimeColumn get createdAt => dateTime()();
   TextColumn get note => text().withDefault(const Constant(''))();

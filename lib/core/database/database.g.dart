@@ -18,6 +18,16 @@ class $AcneSpotsTable extends AcneSpots
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _faceRegionMeta = const VerificationMeta(
     'faceRegion',
   );
@@ -63,6 +73,7 @@ class $AcneSpotsTable extends AcneSpots
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    title,
     faceRegion,
     createdAt,
     note,
@@ -84,6 +95,12 @@ class $AcneSpotsTable extends AcneSpots
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
     }
     if (data.containsKey('face_region')) {
       context.handle(
@@ -126,6 +143,10 @@ class $AcneSpotsTable extends AcneSpots
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
       faceRegion: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}face_region'],
@@ -153,12 +174,14 @@ class $AcneSpotsTable extends AcneSpots
 
 class AcneSpot extends DataClass implements Insertable<AcneSpot> {
   final String id;
+  final String title;
   final String faceRegion;
   final DateTime createdAt;
   final String note;
   final String status;
   const AcneSpot({
     required this.id,
+    required this.title,
     required this.faceRegion,
     required this.createdAt,
     required this.note,
@@ -168,6 +191,7 @@ class AcneSpot extends DataClass implements Insertable<AcneSpot> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    map['title'] = Variable<String>(title);
     map['face_region'] = Variable<String>(faceRegion);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['note'] = Variable<String>(note);
@@ -178,6 +202,7 @@ class AcneSpot extends DataClass implements Insertable<AcneSpot> {
   AcneSpotsCompanion toCompanion(bool nullToAbsent) {
     return AcneSpotsCompanion(
       id: Value(id),
+      title: Value(title),
       faceRegion: Value(faceRegion),
       createdAt: Value(createdAt),
       note: Value(note),
@@ -192,6 +217,7 @@ class AcneSpot extends DataClass implements Insertable<AcneSpot> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return AcneSpot(
       id: serializer.fromJson<String>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
       faceRegion: serializer.fromJson<String>(json['faceRegion']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       note: serializer.fromJson<String>(json['note']),
@@ -203,6 +229,7 @@ class AcneSpot extends DataClass implements Insertable<AcneSpot> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'title': serializer.toJson<String>(title),
       'faceRegion': serializer.toJson<String>(faceRegion),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'note': serializer.toJson<String>(note),
@@ -212,12 +239,14 @@ class AcneSpot extends DataClass implements Insertable<AcneSpot> {
 
   AcneSpot copyWith({
     String? id,
+    String? title,
     String? faceRegion,
     DateTime? createdAt,
     String? note,
     String? status,
   }) => AcneSpot(
     id: id ?? this.id,
+    title: title ?? this.title,
     faceRegion: faceRegion ?? this.faceRegion,
     createdAt: createdAt ?? this.createdAt,
     note: note ?? this.note,
@@ -226,6 +255,7 @@ class AcneSpot extends DataClass implements Insertable<AcneSpot> {
   AcneSpot copyWithCompanion(AcneSpotsCompanion data) {
     return AcneSpot(
       id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
       faceRegion: data.faceRegion.present
           ? data.faceRegion.value
           : this.faceRegion,
@@ -239,6 +269,7 @@ class AcneSpot extends DataClass implements Insertable<AcneSpot> {
   String toString() {
     return (StringBuffer('AcneSpot(')
           ..write('id: $id, ')
+          ..write('title: $title, ')
           ..write('faceRegion: $faceRegion, ')
           ..write('createdAt: $createdAt, ')
           ..write('note: $note, ')
@@ -248,12 +279,14 @@ class AcneSpot extends DataClass implements Insertable<AcneSpot> {
   }
 
   @override
-  int get hashCode => Object.hash(id, faceRegion, createdAt, note, status);
+  int get hashCode =>
+      Object.hash(id, title, faceRegion, createdAt, note, status);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AcneSpot &&
           other.id == this.id &&
+          other.title == this.title &&
           other.faceRegion == this.faceRegion &&
           other.createdAt == this.createdAt &&
           other.note == this.note &&
@@ -262,6 +295,7 @@ class AcneSpot extends DataClass implements Insertable<AcneSpot> {
 
 class AcneSpotsCompanion extends UpdateCompanion<AcneSpot> {
   final Value<String> id;
+  final Value<String> title;
   final Value<String> faceRegion;
   final Value<DateTime> createdAt;
   final Value<String> note;
@@ -269,6 +303,7 @@ class AcneSpotsCompanion extends UpdateCompanion<AcneSpot> {
   final Value<int> rowid;
   const AcneSpotsCompanion({
     this.id = const Value.absent(),
+    this.title = const Value.absent(),
     this.faceRegion = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.note = const Value.absent(),
@@ -277,6 +312,7 @@ class AcneSpotsCompanion extends UpdateCompanion<AcneSpot> {
   });
   AcneSpotsCompanion.insert({
     required String id,
+    this.title = const Value.absent(),
     required String faceRegion,
     required DateTime createdAt,
     this.note = const Value.absent(),
@@ -287,6 +323,7 @@ class AcneSpotsCompanion extends UpdateCompanion<AcneSpot> {
        createdAt = Value(createdAt);
   static Insertable<AcneSpot> custom({
     Expression<String>? id,
+    Expression<String>? title,
     Expression<String>? faceRegion,
     Expression<DateTime>? createdAt,
     Expression<String>? note,
@@ -295,6 +332,7 @@ class AcneSpotsCompanion extends UpdateCompanion<AcneSpot> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (title != null) 'title': title,
       if (faceRegion != null) 'face_region': faceRegion,
       if (createdAt != null) 'created_at': createdAt,
       if (note != null) 'note': note,
@@ -305,6 +343,7 @@ class AcneSpotsCompanion extends UpdateCompanion<AcneSpot> {
 
   AcneSpotsCompanion copyWith({
     Value<String>? id,
+    Value<String>? title,
     Value<String>? faceRegion,
     Value<DateTime>? createdAt,
     Value<String>? note,
@@ -313,6 +352,7 @@ class AcneSpotsCompanion extends UpdateCompanion<AcneSpot> {
   }) {
     return AcneSpotsCompanion(
       id: id ?? this.id,
+      title: title ?? this.title,
       faceRegion: faceRegion ?? this.faceRegion,
       createdAt: createdAt ?? this.createdAt,
       note: note ?? this.note,
@@ -326,6 +366,9 @@ class AcneSpotsCompanion extends UpdateCompanion<AcneSpot> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
     }
     if (faceRegion.present) {
       map['face_region'] = Variable<String>(faceRegion.value);
@@ -349,6 +392,7 @@ class AcneSpotsCompanion extends UpdateCompanion<AcneSpot> {
   String toString() {
     return (StringBuffer('AcneSpotsCompanion(')
           ..write('id: $id, ')
+          ..write('title: $title, ')
           ..write('faceRegion: $faceRegion, ')
           ..write('createdAt: $createdAt, ')
           ..write('note: $note, ')
@@ -1448,6 +1492,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$AcneSpotsTableCreateCompanionBuilder =
     AcneSpotsCompanion Function({
       required String id,
+      Value<String> title,
       required String faceRegion,
       required DateTime createdAt,
       Value<String> note,
@@ -1457,6 +1502,7 @@ typedef $$AcneSpotsTableCreateCompanionBuilder =
 typedef $$AcneSpotsTableUpdateCompanionBuilder =
     AcneSpotsCompanion Function({
       Value<String> id,
+      Value<String> title,
       Value<String> faceRegion,
       Value<DateTime> createdAt,
       Value<String> note,
@@ -1498,6 +1544,11 @@ class $$AcneSpotsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1561,6 +1612,11 @@ class $$AcneSpotsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get faceRegion => $composableBuilder(
     column: $table.faceRegion,
     builder: (column) => ColumnOrderings(column),
@@ -1593,6 +1649,9 @@ class $$AcneSpotsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
 
   GeneratedColumn<String> get faceRegion => $composableBuilder(
     column: $table.faceRegion,
@@ -1663,6 +1722,7 @@ class $$AcneSpotsTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
+                Value<String> title = const Value.absent(),
                 Value<String> faceRegion = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<String> note = const Value.absent(),
@@ -1670,6 +1730,7 @@ class $$AcneSpotsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => AcneSpotsCompanion(
                 id: id,
+                title: title,
                 faceRegion: faceRegion,
                 createdAt: createdAt,
                 note: note,
@@ -1679,6 +1740,7 @@ class $$AcneSpotsTableTableManager
           createCompanionCallback:
               ({
                 required String id,
+                Value<String> title = const Value.absent(),
                 required String faceRegion,
                 required DateTime createdAt,
                 Value<String> note = const Value.absent(),
@@ -1686,6 +1748,7 @@ class $$AcneSpotsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => AcneSpotsCompanion.insert(
                 id: id,
+                title: title,
                 faceRegion: faceRegion,
                 createdAt: createdAt,
                 note: note,

@@ -32,14 +32,19 @@ class AcneSpotRepository {
 
   Future<AcneSpot?> getSpot(String id) => _db.getSpot(id);
 
+  Future<void> updateSpotNote(String id, String note) =>
+      _db.updateSpotNote(id, note);
+
   Future<String> createSpot({
     required FaceRegion region,
+    String title = '',
     String note = '',
   }) async {
     final id = _uuid.v4();
     await _db.insertSpot(
       AcneSpotsCompanion.insert(
         id: id,
+        title: Value(title),
         faceRegion: region.id,
         createdAt: DateTime.now(),
         note: Value(note),
