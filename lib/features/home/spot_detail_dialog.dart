@@ -79,19 +79,21 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
     return spots.first;
   }
 
-  int _resolveIndex(List<AcneSpot> spots) {
-    final currentId = _currentSpotId;
-    if (currentId == null) return 0;
-    final index = spots.indexWhere((spot) => spot.id == currentId);
-    return index >= 0 ? index : 0;
-  }
-
-  void _selectSpot(String spotId, {required int direction}) {
+  void _selectCheckIn(String checkInId, {required int direction}) {
     setState(() {
-      _currentSpotId = spotId;
-      _currentCheckInId = null;
+      _currentCheckInId = checkInId;
       _pageDirection = direction;
     });
+  }
+
+  int _resolveTimelineIndex(List<SpotCheckInPhoto> items) {
+    if (items.isEmpty) return 0;
+    final checkInId = _currentCheckInId;
+    if (checkInId != null) {
+      final index = items.indexWhere((item) => item.checkIn.id == checkInId);
+      if (index >= 0) return index;
+    }
+    return 0;
   }
 
   SpotCheckInPhoto? _resolveSelectedItem(List<SpotCheckInPhoto> items) {
@@ -204,7 +206,6 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
           if (current == null) {
             return _buildEmptyState(context);
           }
-          final resolvedIndex = _resolveIndex(spots);
           if (_currentSpotId != current.id) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
@@ -246,12 +247,7 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           final isWide = constraints.maxWidth >= 1100;
-                          final content = _buildBody(
-                            context,
-                            current,
-                            spots,
-                            resolvedIndex,
-                          );
+                          final content = _buildBody(context, current);
                           if (isWide) return content;
                           return SingleChildScrollView(child: content);
                         },
@@ -342,93 +338,93 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
     );
   }
 
-  Widget _buildBody(
-    BuildContext context,
-    AcneSpot spot,
-    List<AcneSpot> spots,
-    int currentIndex,
-  ) {
+  Widget _buildBody(BuildContext context, AcneSpot spot) {
     final timelineAsync = ref.watch(spotTimelineProvider(spot.id));
-    final selectedItem = timelineAsync.maybeWhen(
-      data: _resolveSelectedItem,
-      orElse: () => null,
-    );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                flex: 62,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: _HeroPhotoPanel(
-                        spot: spot,
-                        selectedItem: selectedItem,
-                        onPrevious: currentIndex > 0
-                            ? () => _selectSpot(
-                                spots[currentIndex - 1].id,
-                                direction: -1,
-                              )
-                            : null,
-                        onNext: currentIndex < spots.length - 1
-                            ? () => _selectSpot(
-                                spots[currentIndex + 1].id,
-                                direction: 1,
-                              )
-                            : null,
-                        onOpenImage: () {
-                          final filePath = selectedItem?.photo?.filePath;
-                          if (filePath == null) return;
-                          showPhotoViewer(context, filePath);
-                        },
-                        direction: _pageDirection,
-                      ),
+    return timelineAsync.when(
+      data: (items) {
+        final selectedItem = _resolveSelectedItem(items);
+        final currentIndex = _resolveTimelineIndex(items);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    flex: 62,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: _HeroPhotoPanel(
+                            spot: spot,
+                            selectedItem: selectedItem,
+                            onPrevious: currentIndex > 0
+                                ? () => _selectCheckIn(
+                                    items[currentIndex - 1].checkIn.id,
+                                    direction: -1,
+                                  )
+                                : null,
+                            onNext: currentIndex < items.length - 1
+                                ? () => _selectCheckIn(
+                                    items[currentIndex + 1].checkIn.id,
+                                    direction: 1,
+                                  )
+                                : null,
+                            onOpenImage: () {
+                              final filePath = selectedItem?.photo?.filePath;
+                              if (filePath == null) return;
+                              showPhotoViewer(context, filePath);
+                            },
+                            direction: _pageDirection,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        _TimelineStrip(
+                          items: items,
+                          currentIndex: currentIndex,
+                          onPrevious: currentIndex > 0
+                              ? () => _selectCheckIn(
+                                  items[currentIndex - 1].checkIn.id,
+                                  direction: -1,
+                                )
+                              : null,
+                          onNext: currentIndex < items.length - 1
+                              ? () => _selectCheckIn(
+                                  items[currentIndex + 1].checkIn.id,
+                                  direction: 1,
+                                )
+                              : null,
+                          onItemTap: (checkInId, index) {
+                            _selectCheckIn(
+                              checkInId,
+                              direction: index > currentIndex ? 1 : -1,
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 18),
-                    _SpotStrip(
-                      spots: spots,
-                      currentIndex: currentIndex,
-                      onPrevious: currentIndex > 0
-                          ? () => _selectSpot(
-                              spots[currentIndex - 1].id,
-                              direction: -1,
-                            )
-                          : null,
-                      onNext: currentIndex < spots.length - 1
-                          ? () => _selectSpot(
-                              spots[currentIndex + 1].id,
-                              direction: 1,
-                            )
-                          : null,
-                      onSpotTap: (spotId, index) {
-                        _selectSpot(
-                          spotId,
-                          direction: index > currentIndex ? 1 : -1,
-                        );
-                      },
+                  ),
+                  const SizedBox(width: 22),
+                  Expanded(
+                    flex: 38,
+                    child: _DetailStack(
+                      spot: spot,
+                      selectedItem: selectedItem,
+                      onEditNote: () => _showEditNoteDialog(spot),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 22),
-              Expanded(
-                flex: 38,
-                child: _DetailStack(
-                  spot: spot,
-                  selectedItem: selectedItem,
-                  onEditNote: () => _showEditNoteDialog(spot),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('加载失败: $e')),
     );
   }
 }
@@ -613,20 +609,20 @@ class _HeroPhotoContent extends StatelessWidget {
   }
 }
 
-class _SpotStrip extends StatelessWidget {
-  const _SpotStrip({
-    required this.spots,
+class _TimelineStrip extends StatelessWidget {
+  const _TimelineStrip({
+    required this.items,
     required this.currentIndex,
     required this.onPrevious,
     required this.onNext,
-    required this.onSpotTap,
+    required this.onItemTap,
   });
 
-  final List<AcneSpot> spots;
+  final List<SpotCheckInPhoto> items;
   final int currentIndex;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
-  final void Function(String spotId, int index) onSpotTap;
+  final void Function(String checkInId, int index) onItemTap;
 
   @override
   Widget build(BuildContext context) {
@@ -644,19 +640,29 @@ class _SpotStrip extends StatelessWidget {
           Expanded(
             child: SizedBox(
               height: 142,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: spots.length,
-                separatorBuilder: (context, _) => const SizedBox(width: 14),
-                itemBuilder: (context, index) {
-                  final spot = spots[index];
-                  return _SpotStripTile(
-                    spot: spot,
-                    selected: index == currentIndex,
-                    onTap: () => onSpotTap(spot.id, index),
-                  );
-                },
-              ),
+              child: items.isEmpty
+                  ? Center(
+                      child: Text(
+                        '暂无打卡记录',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: items.length,
+                      separatorBuilder: (context, _) =>
+                          const SizedBox(width: 14),
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        return _TimelineStripTile(
+                          item: item,
+                          selected: index == currentIndex,
+                          onTap: () => onItemTap(item.checkIn.id, index),
+                        );
+                      },
+                    ),
             ),
           ),
           const SizedBox(width: 12),
@@ -667,20 +673,19 @@ class _SpotStrip extends StatelessWidget {
   }
 }
 
-class _SpotStripTile extends ConsumerWidget {
-  const _SpotStripTile({
-    required this.spot,
+class _TimelineStripTile extends StatelessWidget {
+  const _TimelineStripTile({
+    required this.item,
     required this.selected,
     required this.onTap,
   });
 
-  final AcneSpot spot;
+  final SpotCheckInPhoto item;
   final bool selected;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final thumbnailAsync = ref.watch(spotThumbnailProvider(spot.id));
+  Widget build(BuildContext context) {
     final dateFormat = DateFormat('MM-dd HH:mm');
 
     return InkWell(
@@ -715,16 +720,12 @@ class _SpotStripTile extends ConsumerWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
-                child: thumbnailAsync.when(
-                  data: (photo) => _SpotPreviewPhoto(photoPath: photo?.filePath),
-                  loading: () => const _SpotPreviewPhoto(),
-                  error: (error, stackTrace) => const _SpotPreviewPhoto(),
-                ),
+                child: _SpotPreviewPhoto(photoPath: item.photo?.filePath),
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              dateFormat.format(spot.createdAt),
+              dateFormat.format(item.checkIn.checkInDate),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: selected ? AppTheme.primaryTeal : AppTheme.textPrimary,
