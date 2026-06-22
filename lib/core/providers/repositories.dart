@@ -49,7 +49,7 @@ class AcneSpotRepository {
     String spotId,
     double x,
     double y, {
-    FaceMarkerSize size = FaceMarkerSize.large,
+    FaceMarkerSize size = FaceMarkerSize.small,
   }) async {
     final id = _uuid.v4();
     await _db.insertFaceMarker(

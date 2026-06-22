@@ -38,7 +38,7 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
   final _noteController = TextEditingController();
   final _draftMarkers = <FaceMapMarkerData>[];
 
-  FaceMarkerSize? _pendingAddSize;
+  FaceMarkerSize _pendingAddSize = FaceMarkerSize.small;
   String? _selectedMarkerId;
   String? _draggingMarkerId;
   Size _canvasSize = const Size(520, 360);
@@ -51,10 +51,8 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
     super.dispose();
   }
 
-  void _toggleAddSize(FaceMarkerSize size) {
-    setState(() {
-      _pendingAddSize = _pendingAddSize == size ? null : size;
-    });
+  void _selectAddSize(FaceMarkerSize size) {
+    setState(() => _pendingAddSize = size);
   }
 
   void _addDraftMarker(double x, double y, FaceMarkerSize size) {
@@ -62,7 +60,6 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
     setState(() {
       _draftMarkers.add(FaceMapMarkerData(id: id, mapX: x, mapY: y, size: size));
       _selectedMarkerId = id;
-      _pendingAddSize = null;
     });
   }
 
@@ -106,17 +103,11 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
 
     final hit = _hitTestMarker(local, size);
     if (hit != null) {
-      setState(() {
-        _selectedMarkerId = hit.id;
-        _pendingAddSize = null;
-      });
+      setState(() => _selectedMarkerId = hit.id);
       return;
     }
 
-    final pending = _pendingAddSize;
-    if (pending == null) return;
-
-    _addDraftMarker(normalized.dx, normalized.dy, pending);
+    _addDraftMarker(normalized.dx, normalized.dy, _pendingAddSize);
   }
 
   FaceRegion _resolveRegion() {
@@ -171,9 +162,7 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
   }
 
   String _hintText() {
-    final pending = _pendingAddSize;
-    if (pending != null) return '点击面部添加${pending.label}';
-    return '选择大小后点击面部标记位置，可拖动调整';
+    return '点击面部添加${_pendingAddSize.label}，可切换大小或拖动调整';
   }
 
   @override
@@ -232,7 +221,6 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
                         setState(() {
                           _draggingMarkerId = markerId;
                           _selectedMarkerId = markerId;
-                          _pendingAddSize = null;
                         });
                       },
                       onMarkerDragUpdate: (markerId, local, size) {
@@ -282,7 +270,7 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
                       ),
                     for (final size in FaceMarkerSize.values)
                       FilledButton.tonal(
-                        onPressed: _saving ? null : () => _toggleAddSize(size),
+                        onPressed: _saving ? null : () => _selectAddSize(size),
                         style: FilledButton.styleFrom(
                           backgroundColor: _pendingAddSize == size
                               ? AppTheme.softRose

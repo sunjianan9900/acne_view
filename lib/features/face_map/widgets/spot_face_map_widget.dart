@@ -94,7 +94,7 @@ class SpotFaceMapEditorDialog extends ConsumerStatefulWidget {
 
 class _SpotFaceMapEditorDialogState
     extends ConsumerState<SpotFaceMapEditorDialog> {
-  FaceMarkerSize? _pendingAddSize;
+  FaceMarkerSize _pendingAddSize = FaceMarkerSize.small;
   String? _selectedMarkerId;
   String? _draggingMarkerId;
 
@@ -106,10 +106,7 @@ class _SpotFaceMapEditorDialogState
       size: size,
     );
     if (!mounted) return;
-    setState(() {
-      _selectedMarkerId = id;
-      _pendingAddSize = null;
-    });
+    setState(() => _selectedMarkerId = id);
   }
 
   Future<void> _moveMarker(String markerId, double x, double y) async {
@@ -163,31 +160,19 @@ class _SpotFaceMapEditorDialogState
 
     final hit = _hitTestMarker(markers, local, size);
     if (hit != null) {
-      setState(() {
-        _selectedMarkerId = hit.id;
-        _pendingAddSize = null;
-      });
+      setState(() => _selectedMarkerId = hit.id);
       return;
     }
 
-    final pending = _pendingAddSize;
-    if (pending == null) return;
-
-    await _addMarker(normalized.dx, normalized.dy, pending);
+    await _addMarker(normalized.dx, normalized.dy, _pendingAddSize);
   }
 
-  void _toggleAddSize(FaceMarkerSize size) {
-    setState(() {
-      _pendingAddSize = _pendingAddSize == size ? null : size;
-    });
+  void _selectAddSize(FaceMarkerSize size) {
+    setState(() => _pendingAddSize = size);
   }
 
   String _hintText() {
-    final pending = _pendingAddSize;
-    if (pending != null) {
-      return '点击面部添加${pending.label}';
-    }
-    return '选择下方大小后点击面部添加，拖动可调整位置';
+    return '点击面部添加${_pendingAddSize.label}，可切换大小或拖动调整';
   }
 
   @override
@@ -241,7 +226,6 @@ class _SpotFaceMapEditorDialogState
                       setState(() {
                         _draggingMarkerId = markerId;
                         _selectedMarkerId = markerId;
-                        _pendingAddSize = null;
                       });
                     },
                     onMarkerDragUpdate: (markerId, local, size) {
@@ -273,7 +257,7 @@ class _SpotFaceMapEditorDialogState
                     ),
                   for (final size in FaceMarkerSize.values)
                     FilledButton.tonal(
-                      onPressed: () => _toggleAddSize(size),
+                      onPressed: () => _selectAddSize(size),
                       style: FilledButton.styleFrom(
                         backgroundColor: _pendingAddSize == size
                             ? AppTheme.softRose

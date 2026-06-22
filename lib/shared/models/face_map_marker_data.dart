@@ -7,7 +7,7 @@ class FaceMapMarkerData {
     required this.id,
     required this.mapX,
     required this.mapY,
-    this.size = FaceMarkerSize.large,
+    this.size = FaceMarkerSize.small,
   });
 
   final String id;

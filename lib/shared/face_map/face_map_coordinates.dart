@@ -71,7 +71,7 @@ class FaceMapCoordinates {
 
   static double markerRadius(
     Size canvasSize, {
-    FaceMarkerSize markerSize = FaceMarkerSize.large,
+    FaceMarkerSize markerSize = FaceMarkerSize.small,
     bool selected = false,
     bool dragging = false,
   }) {
@@ -83,7 +83,7 @@ class FaceMapCoordinates {
 
   static double markerHitRadius(
     Size canvasSize, {
-    FaceMarkerSize markerSize = FaceMarkerSize.large,
+    FaceMarkerSize markerSize = FaceMarkerSize.small,
   }) {
     final visual = markerRadius(canvasSize, markerSize: markerSize);
     return (visual * 2.2).clamp(10.0, 22.0);

@@ -22,7 +22,7 @@ class SpotFaceMarkers extends Table {
   RealColumn get mapX => real()();
   RealColumn get mapY => real()();
   TextColumn get size =>
-      text().withDefault(const Constant('large'))();
+      text().withDefault(const Constant('small'))();
 
   @override
   Set<Column> get primaryKey => {id};
