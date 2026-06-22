@@ -664,17 +664,21 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
     _homeLog('detail panel build: spot=${spot.id}, noteLen=${spot.note.length}');
     final dateFormat = DateFormat('yyyy-MM-dd');
     final allPhases = ref.watch(allPhasesProvider);
-    final phaseLabel = timeline.maybeWhen(
-      data: (items) {
-        if (items.isNotEmpty) {
-          final phase = findPhaseInfo(items.first.checkIn.phase, allPhases);
-          if (phase != null) return '当前阶段 ${phase.label}';
-        }
-        return '当前状态 ${status.label}';
-      },
-      orElse: () => '当前状态 ${status.label}',
-    );
-    final phaseColor = timeline.maybeWhen(
+    final phaseLabel = status == SpotStatus.concluded
+        ? '当前状态 收官'
+        : timeline.maybeWhen(
+            data: (items) {
+              if (items.isNotEmpty) {
+                final phase = findPhaseInfo(items.first.checkIn.phase, allPhases);
+                if (phase != null) return '当前阶段 ${phase.label}';
+              }
+              return '当前状态 ${status.label}';
+            },
+            orElse: () => '当前状态 ${status.label}',
+          );
+    final phaseColor = status == SpotStatus.concluded
+        ? AppTheme.primaryTeal
+        : timeline.maybeWhen(
       data: (items) {
         if (items.isNotEmpty) {
           final phase = findPhaseInfo(items.first.checkIn.phase, allPhases);

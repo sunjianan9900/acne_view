@@ -55,7 +55,7 @@ class AggregatedFaceMapWidget extends StatelessWidget {
   }
 
   Color _markerColor(AcneSpot spot) {
-    return SpotStatus.fromId(spot.status) == SpotStatus.active
+    return SpotStatus.fromId(spot.status).isActive
         ? AppTheme.accentCoral
         : AppTheme.primaryTeal;
   }
