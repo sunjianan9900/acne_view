@@ -390,27 +390,84 @@ class _SpotDetailPanel extends ConsumerStatefulWidget {
 }
 
 class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
+  late final TextEditingController _titleController;
   late final TextEditingController _noteController;
+  late final FocusNode _titleFocusNode;
   bool _savingNote = false;
 
   @override
   void initState() {
     super.initState();
+    _titleController = TextEditingController(text: widget.spot?.title ?? '');
     _noteController = TextEditingController(text: widget.spot?.note ?? '');
+    _titleFocusNode = FocusNode();
+    _titleFocusNode.addListener(_onTitleFocusChange);
+  }
+
+  void _onTitleFocusChange() {
+    if (!_titleFocusNode.hasFocus) {
+      _saveTitle();
+    }
   }
 
   @override
   void didUpdateWidget(covariant _SpotDetailPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.spot?.id != widget.spot?.id) {
+      final previousSpot = oldWidget.spot;
+      if (previousSpot != null) {
+        final pendingTitle = _titleController.text.trim();
+        if (pendingTitle != previousSpot.title.trim()) {
+          _persistTitle(previousSpot.id, pendingTitle);
+        }
+      }
+      _titleController.text = widget.spot?.title ?? '';
       _noteController.text = widget.spot?.note ?? '';
+    } else if (!_titleFocusNode.hasFocus &&
+        oldWidget.spot?.title != widget.spot?.title) {
+      _titleController.text = widget.spot?.title ?? '';
     }
   }
 
   @override
   void dispose() {
+    final spot = widget.spot;
+    if (spot != null) {
+      final pendingTitle = _titleController.text.trim();
+      if (pendingTitle != spot.title.trim()) {
+        _persistTitle(spot.id, pendingTitle);
+      }
+    }
+    _titleFocusNode
+      ..removeListener(_onTitleFocusChange)
+      ..dispose();
+    _titleController.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  Future<void> _persistTitle(String spotId, String title) async {
+    try {
+      await ref.read(spotRepositoryProvider).updateSpotTitle(spotId, title);
+    } catch (_) {}
+  }
+
+  Future<void> _saveTitle() async {
+    final spot = widget.spot;
+    if (spot == null) return;
+
+    final newTitle = _titleController.text.trim();
+    if (newTitle == spot.title.trim()) return;
+
+    try {
+      await ref.read(spotRepositoryProvider).updateSpotTitle(spot.id, newTitle);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('标题保存失败: $e')));
+      }
+    }
   }
 
   Future<void> _saveNote() async {
@@ -515,11 +572,27 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    spotDisplayTitle(spot),
+                  TextField(
+                    controller: _titleController,
+                    focusNode: _titleFocusNode,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
+                    decoration: InputDecoration(
+                      hintText: spotRegionLabel(spot),
+                      hintStyle: Theme.of(context).textTheme.titleLarge
+                          ?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textSecondary.withValues(
+                              alpha: 0.55,
+                            ),
+                          ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _saveTitle(),
                   ),
                   const SizedBox(height: 8),
                   Wrap(

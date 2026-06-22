@@ -36,6 +36,9 @@ class AcneSpotRepository {
   Future<void> updateSpotNote(String id, String note) =>
       _db.updateSpotNote(id, note);
 
+  Future<void> updateSpotTitle(String id, String title) =>
+      _db.updateSpotTitle(id, title);
+
   Future<void> updateSpotMapPosition(String id, double? x, double? y) =>
       _db.updateSpotMapPosition(id, x, y);
 

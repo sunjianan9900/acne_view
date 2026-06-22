@@ -20,6 +20,7 @@ class _SpySpotRepository implements AcneSpotRepository {
 
   String? lastUpdatedSpotId;
   String? lastUpdatedNote;
+  String? lastUpdatedTitle;
 
   @override
   Stream<List<AcneSpot>> watchAllSpots() =>
@@ -79,6 +80,12 @@ class _SpySpotRepository implements AcneSpotRepository {
   Future<void> updateSpotNote(String id, String note) async {
     lastUpdatedSpotId = id;
     lastUpdatedNote = note;
+  }
+
+  @override
+  Future<void> updateSpotTitle(String id, String title) async {
+    lastUpdatedSpotId = id;
+    lastUpdatedTitle = title;
   }
 
   @override
@@ -271,8 +278,25 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.byType(TextField), findsOneWidget);
-    await tester.enterText(find.byType(TextField).first, '新增备注内容');
+    expect(find.byType(TextField), findsNWidgets(2));
+
+    final titleField = find.widgetWithText(TextField, '首页标题测试');
+    expect(titleField, findsOneWidget);
+    await tester.enterText(titleField, '更新后的标题');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(repo.lastUpdatedSpotId, 'spot-home-1');
+    expect(repo.lastUpdatedTitle, '更新后的标题');
+
+    final noteField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.decoration?.hintText ==
+              '记录这颗痘痘的变化、观察、用药和任何想保留的日志',
+    );
+    await tester.enterText(noteField, '新增备注内容');
     await tester.tap(find.text('保存备注'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));

@@ -111,6 +111,12 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Future<int> updateSpotTitle(String id, String title) {
+    return (update(acneSpots)..where((t) => t.id.equals(id))).write(
+      AcneSpotsCompanion(title: Value(title)),
+    );
+  }
+
   Future<int> updateSpotStatus(String id, String status) {
     return (update(acneSpots)..where((t) => t.id.equals(id))).write(
       AcneSpotsCompanion(status: Value(status)),
