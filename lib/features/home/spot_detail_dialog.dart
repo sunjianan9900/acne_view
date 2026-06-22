@@ -343,6 +343,11 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
                 );
               }
             },
+            const SingleActivator(LogicalKeyboardKey.space): () {
+              final filePath = selectedItem?.photo?.filePath;
+              if (filePath == null) return;
+              showPhotoViewer(context, filePath);
+            },
           },
           child: Focus(
             autofocus: true,
