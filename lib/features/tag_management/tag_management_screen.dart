@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/preferences/custom_phase_labels.dart';
+import '../../core/preferences/custom_phases.dart';
 import '../../core/preferences/custom_treatment_tags.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/acne_phase.dart';
@@ -33,42 +34,78 @@ class _PhaseTagsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final customLabels = ref.watch(phaseLabelsProvider);
+    final allPhases = ref.watch(allPhasesProvider);
 
     return _SectionCard(
       title: '痘痘时期',
-      subtitle: '自定义各时期的显示名称，打卡与时间线将同步更新',
+      subtitle: '自定义或新增时期，打卡与时间线将同步更新',
       icon: Icons.timeline_outlined,
+      trailing: FilledButton.icon(
+        onPressed: () => _showAddPhaseDialog(context, ref),
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('添加时期'),
+      ),
       child: Column(
         children: [
-          for (var i = 0; i < AcnePhase.values.length; i++) ...[
+          for (var i = 0; i < allPhases.length; i++) ...[
             if (i > 0) const SizedBox(height: 10),
-            _PhaseTagRow(
-              phase: AcnePhase.values[i],
-              displayLabel: phaseDisplayLabel(AcnePhase.values[i], customLabels),
-              isCustomized: customLabels.containsKey(AcnePhase.values[i].id),
-            ),
+            _PhaseTagRow(phase: allPhases[i]),
           ],
         ],
       ),
     );
   }
+
+  Future<void> _showAddPhaseDialog(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final added = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('添加时期'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: '时期名称',
+            hintText: '例如：爆发期、结痂期',
+          ),
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => Navigator.of(ctx).pop(true),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('添加'),
+          ),
+        ],
+      ),
+    );
+
+    if (added == true && context.mounted) {
+      final name = controller.text.trim();
+      if (name.isNotEmpty) {
+        await ref.read(customPhasesProvider.notifier).addPhase(name);
+      }
+    }
+    controller.dispose();
+  }
 }
 
 class _PhaseTagRow extends ConsumerWidget {
-  const _PhaseTagRow({
-    required this.phase,
-    required this.displayLabel,
-    required this.isCustomized,
-  });
+  const _PhaseTagRow({required this.phase});
 
-  final AcnePhase phase;
-  final String displayLabel;
-  final bool isCustomized;
+  final PhaseInfo phase;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = acnePhaseColor(phase);
+    final customLabels = ref.watch(phaseLabelsProvider);
+    final builtin = phase.builtinPhase;
+    final isRenamed =
+        builtin != null && customLabels.containsKey(builtin.id);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -83,7 +120,7 @@ class _PhaseTagRow extends ConsumerWidget {
             width: 10,
             height: 10,
             decoration: BoxDecoration(
-              color: color,
+              color: phase.color,
               shape: BoxShape.circle,
             ),
           ),
@@ -93,32 +130,45 @@ class _PhaseTagRow extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  displayLabel,
+                  phase.label,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (isCustomized)
+                if (phase.isCustom)
+                  Text('自定义时期', style: Theme.of(context).textTheme.bodySmall)
+                else if (isRenamed)
                   Text(
-                    '默认：${phase.label}',
+                    '默认：${builtin.label}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
               ],
             ),
           ),
-          IconButton(
-            tooltip: '编辑名称',
-            onPressed: () => _showEditDialog(context, ref),
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            visualDensity: VisualDensity.compact,
-          ),
-          if (isCustomized)
+          if (builtin != null) ...[
             IconButton(
-              tooltip: '恢复默认',
+              tooltip: '编辑名称',
+              onPressed: () => _showEditDialog(context, ref),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              visualDensity: VisualDensity.compact,
+            ),
+            if (isRenamed)
+              IconButton(
+                tooltip: '恢复默认',
+                onPressed: () => ref
+                    .read(customPhaseLabelsProvider.notifier)
+                    .resetLabel(builtin.id),
+                icon: const Icon(Icons.undo_outlined, size: 18),
+                visualDensity: VisualDensity.compact,
+              ),
+          ],
+          if (phase.isCustom)
+            IconButton(
+              tooltip: '删除',
               onPressed: () => ref
-                  .read(customPhaseLabelsProvider.notifier)
-                  .resetLabel(phase.id),
-              icon: const Icon(Icons.undo_outlined, size: 18),
+                  .read(customPhasesProvider.notifier)
+                  .removePhase(phase.id),
+              icon: const Icon(Icons.delete_outline, size: 18),
               visualDensity: VisualDensity.compact,
             ),
         ],
@@ -127,11 +177,14 @@ class _PhaseTagRow extends ConsumerWidget {
   }
 
   Future<void> _showEditDialog(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController(text: displayLabel);
+    final builtin = phase.builtinPhase;
+    if (builtin == null) return;
+
+    final controller = TextEditingController(text: phase.label);
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('编辑「${phase.label}」'),
+        title: Text('编辑「${builtin.label}」'),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -160,7 +213,7 @@ class _PhaseTagRow extends ConsumerWidget {
       if (name.isNotEmpty) {
         await ref
             .read(customPhaseLabelsProvider.notifier)
-            .setLabel(phase.id, name);
+            .setLabel(builtin.id, name);
       }
     }
     controller.dispose();

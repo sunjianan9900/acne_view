@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/database.dart';
-import '../../shared/models/acne_phase.dart';
 import '../../shared/models/face_region.dart';
 import '../../shared/models/photo_source.dart';
 import '../../shared/models/spot_status.dart';
@@ -122,7 +121,7 @@ class CheckInRepository {
     required String photoSourcePath,
     required PhotoSource source,
     required List<TreatmentEntry> treatments,
-    required AcnePhase phase,
+    required String phaseId,
     String note = '',
     DateTime? checkInDate,
   }) async {
@@ -135,7 +134,7 @@ class CheckInRepository {
         spotId: spotId,
         checkInDate: now,
         note: Value(note),
-        phase: Value(phase.id),
+        phase: Value(phaseId),
       ),
     );
 
@@ -185,14 +184,14 @@ class CheckInRepository {
 
   Future<void> updateCheckIn({
     required String checkInId,
-    required AcnePhase phase,
+    required String phaseId,
     required String note,
     required DateTime checkInDate,
     required List<TreatmentEntry> treatments,
   }) async {
     await _db.updateCheckInRecord(
       checkInId,
-      phase: phase.id,
+      phase: phaseId,
       note: note,
       checkInDate: checkInDate,
     );

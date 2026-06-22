@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/database/database.dart';
-import '../../core/preferences/custom_phase_labels.dart';
+import '../../core/preferences/custom_phases.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/acne_phase.dart';
@@ -528,9 +528,7 @@ class _HeroPhotoContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = SpotStatus.fromId(spot.status);
-    final phase = selectedItem != null
-        ? AcnePhase.fromIdOrNull(selectedItem!.checkIn.phase)
-        : null;
+    final phaseId = selectedItem?.checkIn.phase ?? '';
     final photoPath = selectedItem?.photo?.filePath;
 
     return Container(
@@ -592,7 +590,7 @@ class _HeroPhotoContent extends StatelessWidget {
             Positioned(
               left: 18,
               top: 66,
-              child: _PhasePill(phase: phase),
+              child: _PhasePill(phaseId: phaseId),
             ),
             Positioned(
               right: 18,
@@ -809,13 +807,15 @@ class _DetailStack extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = SpotStatus.fromId(spot.status);
-    final phaseLabels = ref.watch(phaseLabelsProvider);
-    final phase = selectedItem != null
-        ? AcnePhase.fromIdOrNull(selectedItem!.checkIn.phase)
+    final allPhases = ref.watch(allPhasesProvider);
+    final phaseInfo = selectedItem != null
+        ? findPhaseInfo(selectedItem!.checkIn.phase, allPhases)
         : null;
     final recordDate = selectedItem?.checkIn.checkInDate ?? spot.createdAt;
     final note = selectedItem?.checkIn.note.trim() ?? '';
     final medication = _medicationText(selectedItem);
+    final fallback = _fallbackPhaseInfo(status, allPhases);
+    final displayPhase = phaseInfo ?? fallback;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -835,19 +835,16 @@ class _DetailStack extends ConsumerWidget {
         _InfoCard(
           icon: Icons.sick_outlined,
           title: '痘痘阶段',
-          badge: phase != null
-              ? phaseDisplayLabel(phase, phaseLabels)
-              : status.label,
-          badgeColor: phase != null
-              ? acnePhaseColor(phase)
-              : (status == SpotStatus.active
-                    ? AppTheme.accentCoral
-                    : AppTheme.primaryTeal),
+          badge: phaseInfo?.label ?? status.label,
+          badgeColor: phaseInfo?.color ??
+              (status == SpotStatus.active
+                  ? AppTheme.accentCoral
+                  : AppTheme.primaryTeal),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _phaseDescription(phase ?? _fallbackPhase(status)),
+                _phaseDescription(displayPhase),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   height: 1.6,
                   color: AppTheme.textPrimary.withValues(alpha: 0.9),
@@ -880,7 +877,7 @@ class _DetailStack extends ConsumerWidget {
         const SizedBox(height: 14),
         _TipCard(
           title: '温馨提示',
-          text: _tipForPhase(phase ?? _fallbackPhase(status)),
+          text: _tipForPhase(displayPhase),
         ),
       ],
     );
@@ -897,12 +894,19 @@ class _DetailStack extends ConsumerWidget {
     return medications.join(' · ');
   }
 
-  AcnePhase _fallbackPhase(SpotStatus status) {
-    return status == SpotStatus.active ? AcnePhase.swollen : AcnePhase.receding;
+  PhaseInfo _fallbackPhaseInfo(SpotStatus status, List<PhaseInfo> allPhases) {
+    final fallbackId = status == SpotStatus.active
+        ? AcnePhase.swollen.id
+        : AcnePhase.receding.id;
+    return findPhaseInfo(fallbackId, allPhases) ?? allPhases.first;
   }
 
-  String _phaseDescription(AcnePhase phase) {
-    return switch (phase) {
+  String _phaseDescription(PhaseInfo phase) {
+    final builtin = phase.builtinPhase;
+    if (builtin == null) {
+      return '当前处于「${phase.label}」阶段，建议持续记录皮肤变化并坚持温和护理。';
+    }
+    return switch (builtin) {
       AcnePhase.swollen =>
         '红肿明显，可能伴有疼痛或触痛，建议避免挤压，注意消炎护理。',
       AcnePhase.inflammatory =>
@@ -914,8 +918,12 @@ class _DetailStack extends ConsumerWidget {
     };
   }
 
-  String _tipForPhase(AcnePhase phase) {
-    return switch (phase) {
+  String _tipForPhase(PhaseInfo phase) {
+    final builtin = phase.builtinPhase;
+    if (builtin == null) {
+      return '保持皮肤清洁与规律作息，持续记录有助于观察恢复趋势。';
+    }
+    return switch (builtin) {
       AcnePhase.swollen =>
         '保持皮肤清洁，避免辛辣刺激食物和熬夜，多喝水有助于皮肤恢复。',
       AcnePhase.inflammatory =>
@@ -1240,15 +1248,17 @@ class _StatusPill extends StatelessWidget {
 }
 
 class _PhasePill extends ConsumerWidget {
-  const _PhasePill({required this.phase});
+  const _PhasePill({required this.phaseId});
 
-  final AcnePhase? phase;
+  final String phaseId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (phaseId.isEmpty) return const SizedBox.shrink();
+    final allPhases = ref.watch(allPhasesProvider);
+    final phase = findPhaseInfo(phaseId, allPhases);
     if (phase == null) return const SizedBox.shrink();
-    final phaseLabels = ref.watch(phaseLabelsProvider);
-    final color = acnePhaseColor(phase!);
+    final color = phase.color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -1257,7 +1267,7 @@ class _PhasePill extends ConsumerWidget {
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Text(
-        phaseDisplayLabel(phase!, phaseLabels),
+        phase.label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: color,
           fontWeight: FontWeight.w800,

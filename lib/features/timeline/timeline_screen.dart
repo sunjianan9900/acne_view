@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/database/database.dart';
-import '../../core/preferences/custom_phase_labels.dart';
+import '../../core/preferences/custom_phases.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/acne_phase.dart';
@@ -230,7 +230,7 @@ class _CheckInCard extends ConsumerWidget {
                         ),
                         if (checkIn.phase.isNotEmpty) ...[
                           const SizedBox(height: 6),
-                          _PhaseChip(phase: AcnePhase.fromId(checkIn.phase)),
+                          _PhaseChip(phaseId: checkIn.phase),
                         ],
                         if (checkIn.note.isNotEmpty) ...[
                           const SizedBox(height: 4),
@@ -279,14 +279,16 @@ class _CheckInCard extends ConsumerWidget {
 }
 
 class _PhaseChip extends ConsumerWidget {
-  const _PhaseChip({required this.phase});
+  const _PhaseChip({required this.phaseId});
 
-  final AcnePhase phase;
+  final String phaseId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final phaseLabels = ref.watch(phaseLabelsProvider);
-    final color = acnePhaseColor(phase);
+    final allPhases = ref.watch(allPhasesProvider);
+    final phase = findPhaseInfo(phaseId, allPhases);
+    if (phase == null) return const SizedBox.shrink();
+    final color = phase.color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -294,7 +296,7 @@ class _PhaseChip extends ConsumerWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        phaseDisplayLabel(phase, phaseLabels),
+        phase.label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           color: color,
           fontWeight: FontWeight.w600,

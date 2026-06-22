@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/database/database.dart';
-import '../../core/preferences/custom_phase_labels.dart';
+import '../../core/preferences/custom_phases.dart';
 import '../../core/preferences/custom_treatment_tags.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
@@ -48,7 +48,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
   late bool _editing;
   bool _saving = false;
   bool _deleting = false;
-  AcnePhase _selectedPhase = AcnePhase.swollen;
+  String _selectedPhaseId = AcnePhase.swollen.id;
   DateTime _selectedCheckInDate = DateTime.now();
   final _noteController = TextEditingController();
   final List<_TreatmentRow> _treatments = [];
@@ -82,8 +82,9 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
 
   void _ensureFormLoaded(CheckInDetail detail) {
     if (_formReady) return;
-    _selectedPhase =
-        AcnePhase.fromIdOrNull(detail.checkIn.phase) ?? AcnePhase.swollen;
+    _selectedPhaseId = detail.checkIn.phase.isNotEmpty
+        ? detail.checkIn.phase
+        : AcnePhase.swollen.id;
     _selectedCheckInDate = detail.checkIn.checkInDate;
     _noteController.text = detail.checkIn.note;
     for (final row in _treatments) {
@@ -158,7 +159,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
           .read(checkInRepositoryProvider)
           .updateCheckIn(
             checkInId: detail.checkIn.id,
-            phase: _selectedPhase,
+            phaseId: _selectedPhaseId,
             note: _noteController.text,
             checkInDate: _selectedCheckInDate,
             treatments: entries,
@@ -271,7 +272,6 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
 
   Widget _buildContent(BuildContext context, CheckInDetail detail) {
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
-    final phase = AcnePhase.fromIdOrNull(detail.checkIn.phase);
     final isWide = MediaQuery.of(context).size.width >= 720;
 
     final photoPanel = _PhotoPanel(photoPath: detail.photo?.filePath);
@@ -279,7 +279,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: _editing
           ? _buildEditForm(detail)
-          : _buildViewInfo(context, detail, dateFormat, phase),
+          : _buildViewInfo(context, detail, dateFormat, detail.checkIn.phase),
     );
 
     return Column(
@@ -380,7 +380,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
     BuildContext context,
     CheckInDetail detail,
     DateFormat dateFormat,
-    AcnePhase? phase,
+    String phaseId,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,8 +399,8 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
           ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
-        if (phase != null)
-          _PhaseTag(phase: phase)
+        if (phaseId.isNotEmpty)
+          _PhaseTag(phaseId: phaseId)
         else
           Text(
             '未标记',
@@ -478,7 +478,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
   }
 
   Widget _buildEditForm(CheckInDetail detail) {
-    final phaseLabels = ref.watch(phaseLabelsProvider);
+    final allPhases = ref.watch(allPhasesProvider);
     final dateFormat = DateFormat('yyyy-MM-dd');
     final timeFormat = DateFormat('HH:mm');
 
@@ -522,13 +522,13 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: AcnePhase.values.map((phase) {
-            final selected = _selectedPhase == phase;
-            final color = acnePhaseColor(phase);
+          children: allPhases.map((phase) {
+            final selected = _selectedPhaseId == phase.id;
+            final color = phase.color;
             return ChoiceChip(
-              label: Text(phaseDisplayLabel(phase, phaseLabels)),
+              label: Text(phase.label),
               selected: selected,
-              onSelected: (_) => setState(() => _selectedPhase = phase),
+              onSelected: (_) => setState(() => _selectedPhaseId = phase.id),
               selectedColor: color.withValues(alpha: 0.2),
               labelStyle: TextStyle(
                 color: selected ? color : AppTheme.textPrimary,
@@ -647,14 +647,23 @@ class _PhotoPanel extends StatelessWidget {
 }
 
 class _PhaseTag extends ConsumerWidget {
-  const _PhaseTag({required this.phase});
+  const _PhaseTag({required this.phaseId});
 
-  final AcnePhase phase;
+  final String phaseId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final phaseLabels = ref.watch(phaseLabelsProvider);
-    final color = acnePhaseColor(phase);
+    final allPhases = ref.watch(allPhasesProvider);
+    final phase = findPhaseInfo(phaseId, allPhases);
+    if (phase == null) {
+      return Text(
+        phaseId,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+      );
+    }
+    final color = phase.color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -662,7 +671,7 @@ class _PhaseTag extends ConsumerWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        phaseDisplayLabel(phase, phaseLabels),
+        phase.label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
           color: color,
           fontWeight: FontWeight.w600,

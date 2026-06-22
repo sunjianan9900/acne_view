@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/preferences/custom_phase_labels.dart';
+import '../../core/preferences/custom_phases.dart';
 import '../../core/preferences/custom_treatment_tags.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
@@ -36,7 +36,7 @@ class CheckInScreen extends ConsumerStatefulWidget {
 class _CheckInScreenState extends ConsumerState<CheckInScreen> {
   final _noteController = TextEditingController();
   final List<_TreatmentRow> _treatments = [_TreatmentRow()];
-  AcnePhase _selectedPhase = AcnePhase.swollen;
+  String _selectedPhaseId = AcnePhase.swollen.id;
   bool _saving = false;
 
   @override
@@ -113,7 +113,7 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
             photoSourcePath: widget.photoPath,
             source: source,
             treatments: entries,
-            phase: _selectedPhase,
+            phaseId: _selectedPhaseId,
             note: _noteController.text,
           );
 
@@ -163,11 +163,11 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
           ? _DesktopCheckInBody(
               photoPath: widget.photoPath,
               noteController: _noteController,
-              selectedPhase: _selectedPhase,
+              selectedPhaseId: _selectedPhaseId,
               treatments: _treatments,
               saving: _saving,
-              onPhaseChanged: (phase) =>
-                  setState(() => _selectedPhase = phase),
+              onPhaseChanged: (phaseId) =>
+                  setState(() => _selectedPhaseId = phaseId),
               onApplyTag: _applyTag,
               onAddTreatment: _addTreatment,
               onRemoveTreatment: _removeTreatment,
@@ -176,11 +176,11 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
           : _MobileCheckInBody(
               photoPath: widget.photoPath,
               noteController: _noteController,
-              selectedPhase: _selectedPhase,
+              selectedPhaseId: _selectedPhaseId,
               treatments: _treatments,
               saving: _saving,
-              onPhaseChanged: (phase) =>
-                  setState(() => _selectedPhase = phase),
+              onPhaseChanged: (phaseId) =>
+                  setState(() => _selectedPhaseId = phaseId),
               onApplyTag: _applyTag,
               onAddTreatment: _addTreatment,
               onRemoveTreatment: _removeTreatment,
@@ -194,7 +194,7 @@ class _DesktopCheckInBody extends StatelessWidget {
   const _DesktopCheckInBody({
     required this.photoPath,
     required this.noteController,
-    required this.selectedPhase,
+    required this.selectedPhaseId,
     required this.treatments,
     required this.saving,
     required this.onPhaseChanged,
@@ -206,10 +206,10 @@ class _DesktopCheckInBody extends StatelessWidget {
 
   final String photoPath;
   final TextEditingController noteController;
-  final AcnePhase selectedPhase;
+  final String selectedPhaseId;
   final List<_TreatmentRow> treatments;
   final bool saving;
-  final ValueChanged<AcnePhase> onPhaseChanged;
+  final ValueChanged<String> onPhaseChanged;
   final ValueChanged<String> onApplyTag;
   final VoidCallback onAddTreatment;
   final ValueChanged<int> onRemoveTreatment;
@@ -230,7 +230,7 @@ class _DesktopCheckInBody extends StatelessWidget {
           flex: 4,
           child: _CheckInForm(
             noteController: noteController,
-            selectedPhase: selectedPhase,
+            selectedPhaseId: selectedPhaseId,
             treatments: treatments,
             saving: saving,
             onPhaseChanged: onPhaseChanged,
@@ -249,7 +249,7 @@ class _MobileCheckInBody extends StatelessWidget {
   const _MobileCheckInBody({
     required this.photoPath,
     required this.noteController,
-    required this.selectedPhase,
+    required this.selectedPhaseId,
     required this.treatments,
     required this.saving,
     required this.onPhaseChanged,
@@ -261,10 +261,10 @@ class _MobileCheckInBody extends StatelessWidget {
 
   final String photoPath;
   final TextEditingController noteController;
-  final AcnePhase selectedPhase;
+  final String selectedPhaseId;
   final List<_TreatmentRow> treatments;
   final bool saving;
-  final ValueChanged<AcnePhase> onPhaseChanged;
+  final ValueChanged<String> onPhaseChanged;
   final ValueChanged<String> onApplyTag;
   final VoidCallback onAddTreatment;
   final ValueChanged<int> onRemoveTreatment;
@@ -280,7 +280,7 @@ class _MobileCheckInBody extends StatelessWidget {
           const SizedBox(height: 20),
           _CheckInForm(
             noteController: noteController,
-            selectedPhase: selectedPhase,
+            selectedPhaseId: selectedPhaseId,
             treatments: treatments,
             saving: saving,
             onPhaseChanged: onPhaseChanged,
@@ -327,7 +327,7 @@ class _PhotoPreview extends StatelessWidget {
 class _CheckInForm extends ConsumerWidget {
   const _CheckInForm({
     required this.noteController,
-    required this.selectedPhase,
+    required this.selectedPhaseId,
     required this.treatments,
     required this.saving,
     required this.onPhaseChanged,
@@ -338,10 +338,10 @@ class _CheckInForm extends ConsumerWidget {
   });
 
   final TextEditingController noteController;
-  final AcnePhase selectedPhase;
+  final String selectedPhaseId;
   final List<_TreatmentRow> treatments;
   final bool saving;
-  final ValueChanged<AcnePhase> onPhaseChanged;
+  final ValueChanged<String> onPhaseChanged;
   final ValueChanged<String> onApplyTag;
   final VoidCallback onAddTreatment;
   final ValueChanged<int> onRemoveTreatment;
@@ -349,7 +349,7 @@ class _CheckInForm extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final phaseLabels = ref.watch(phaseLabelsProvider);
+    final allPhases = ref.watch(allPhasesProvider);
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -364,13 +364,13 @@ class _CheckInForm extends ConsumerWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: AcnePhase.values.map((phase) {
-              final selected = selectedPhase == phase;
-              final color = acnePhaseColor(phase);
+            children: allPhases.map((phase) {
+              final selected = selectedPhaseId == phase.id;
+              final color = phase.color;
               return ChoiceChip(
-                label: Text(phaseDisplayLabel(phase, phaseLabels)),
+                label: Text(phase.label),
                 selected: selected,
-                onSelected: (_) => onPhaseChanged(phase),
+                onSelected: (_) => onPhaseChanged(phase.id),
                 selectedColor: color.withValues(alpha: 0.2),
                 labelStyle: TextStyle(
                   color: selected ? color : AppTheme.textPrimary,

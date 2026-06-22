@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../core/database/database.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/preferences/custom_phases.dart';
 import '../../shared/models/acne_phase.dart';
 import '../../shared/models/spot_display.dart';
 import '../../shared/models/spot_status.dart';
@@ -440,10 +441,11 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
     final timeline = ref.watch(spotTimelineProvider(spot.id));
     _homeLog('detail panel build: spot=${spot.id}, noteLen=${spot.note.length}');
     final dateFormat = DateFormat('yyyy-MM-dd');
+    final allPhases = ref.watch(allPhasesProvider);
     final phaseLabel = timeline.maybeWhen(
       data: (items) {
         if (items.isNotEmpty) {
-          final phase = AcnePhase.fromIdOrNull(items.first.checkIn.phase);
+          final phase = findPhaseInfo(items.first.checkIn.phase, allPhases);
           if (phase != null) return '当前阶段 ${phase.label}';
         }
         return '当前状态 ${status.label}';
@@ -453,8 +455,8 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
     final phaseColor = timeline.maybeWhen(
       data: (items) {
         if (items.isNotEmpty) {
-          final phase = AcnePhase.fromIdOrNull(items.first.checkIn.phase);
-          if (phase != null) return acnePhaseColor(phase);
+          final phase = findPhaseInfo(items.first.checkIn.phase, allPhases);
+          if (phase != null) return phase.color;
         }
         return status == SpotStatus.active
             ? AppTheme.accentCoral
@@ -568,14 +570,15 @@ class _EmptySpotDetail extends StatelessWidget {
   }
 }
 
-class _PhotoTimelineList extends StatelessWidget {
+class _PhotoTimelineList extends ConsumerWidget {
   const _PhotoTimelineList({required this.spot, required this.items});
 
   final AcneSpot spot;
   final List<SpotCheckInPhoto> items;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final allPhases = ref.watch(allPhasesProvider);
     final dateFormat = DateFormat('MM-dd HH:mm');
     final baselineDate = items
         .map((item) => item.checkIn.checkInDate)
@@ -592,8 +595,8 @@ class _PhotoTimelineList extends StatelessWidget {
         return _TimelineListItem(
           item: item,
           dayLabel: _dayLabel(baselineDate, item.checkIn.checkInDate),
-          phaseLabel: _phaseLabel(item),
-          phaseColor: _phaseColor(item),
+          phaseLabel: _phaseLabel(item, allPhases),
+          phaseColor: _phaseColor(item, allPhases),
           dateLabel: dateFormat.format(item.checkIn.checkInDate),
         );
       },
@@ -607,14 +610,14 @@ class _PhotoTimelineList extends StatelessWidget {
     return '第 $days 天';
   }
 
-  String _phaseLabel(SpotCheckInPhoto item) {
-    final phase = AcnePhase.fromIdOrNull(item.checkIn.phase);
+  String _phaseLabel(SpotCheckInPhoto item, List<PhaseInfo> allPhases) {
+    final phase = findPhaseInfo(item.checkIn.phase, allPhases);
     return phase?.label ?? '未标记';
   }
 
-  Color _phaseColor(SpotCheckInPhoto item) {
-    final phase = AcnePhase.fromIdOrNull(item.checkIn.phase);
-    return phase == null ? AppTheme.textSecondary : acnePhaseColor(phase);
+  Color _phaseColor(SpotCheckInPhoto item, List<PhaseInfo> allPhases) {
+    final phase = findPhaseInfo(item.checkIn.phase, allPhases);
+    return phase?.color ?? AppTheme.textSecondary;
   }
 }
 

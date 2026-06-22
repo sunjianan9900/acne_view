@@ -103,7 +103,7 @@ class _QuickAddSpotSheetState extends ConsumerState<QuickAddSpotSheet> {
             photoSourcePath: widget.photoPath,
             source: widget.photoSource,
             treatments: entries,
-            phase: AcnePhase.swollen,
+            phaseId: AcnePhase.swollen.id,
           );
 
       if (mounted) {

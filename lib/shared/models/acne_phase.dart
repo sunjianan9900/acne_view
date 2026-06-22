@@ -1,5 +1,54 @@
 import 'package:flutter/material.dart';
 
+import 'custom_phase.dart';
+
+class PhaseInfo {
+  const PhaseInfo({
+    required this.id,
+    required this.label,
+    required this.color,
+    this.isCustom = false,
+    this.builtinPhase,
+  });
+
+  final String id;
+  final String label;
+  final Color color;
+  final bool isCustom;
+  final AcnePhase? builtinPhase;
+}
+
+List<PhaseInfo> buildAllPhases({
+  required Map<String, String> customLabels,
+  required List<CustomPhase> customPhases,
+}) {
+  final builtIn = AcnePhase.values.map(
+    (phase) => PhaseInfo(
+      id: phase.id,
+      label: customLabels[phase.id] ?? phase.label,
+      color: acnePhaseColor(phase),
+      builtinPhase: phase,
+    ),
+  );
+  final custom = customPhases.map(
+    (phase) => PhaseInfo(
+      id: phase.id,
+      label: phase.label,
+      color: Color(phase.colorValue),
+      isCustom: true,
+    ),
+  );
+  return [...builtIn, ...custom];
+}
+
+PhaseInfo? findPhaseInfo(String id, List<PhaseInfo> phases) {
+  if (id.isEmpty) return null;
+  for (final phase in phases) {
+    if (phase.id == id) return phase;
+  }
+  return null;
+}
+
 enum AcnePhase {
   swollen('swollen', '红肿期'),
   inflammatory('inflammatory', '炎症期'),
