@@ -114,9 +114,9 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
     final selectedItem = _resolveSelectedItem(items);
     if (selectedItem == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('暂无打卡记录可编辑')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('暂无打卡记录可编辑')));
       }
       return;
     }
@@ -139,9 +139,9 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
     final selectedItem = _resolveSelectedItem(items);
     if (selectedItem == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('暂无打卡记录可删除')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('暂无打卡记录可删除')));
       }
       return;
     }
@@ -286,10 +286,7 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Text(
-        '暂无痘痘记录',
-        style: Theme.of(context).textTheme.bodyMedium,
-      ),
+      child: Text('暂无痘痘记录', style: Theme.of(context).textTheme.bodyMedium),
     );
   }
 
@@ -582,16 +579,8 @@ class _HeroPhotoContent extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(
-              left: 18,
-              top: 18,
-              child: _StatusPill(status: status),
-            ),
-            Positioned(
-              left: 18,
-              top: 66,
-              child: _PhasePill(phaseId: phaseId),
-            ),
+            Positioned(left: 18, top: 18, child: _StatusPill(status: status)),
+            Positioned(left: 18, top: 66, child: _PhasePill(phaseId: phaseId)),
             Positioned(
               right: 18,
               bottom: 18,
@@ -631,9 +620,9 @@ class _HeroPhotoContent extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             '暂无照片',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
           ),
         ],
       ),
@@ -836,7 +825,8 @@ class _DetailStack extends ConsumerWidget {
           icon: Icons.sick_outlined,
           title: '痘痘阶段',
           badge: phaseInfo?.label ?? status.label,
-          badgeColor: phaseInfo?.color ??
+          badgeColor:
+              phaseInfo?.color ??
               (status == SpotStatus.active
                   ? AppTheme.accentCoral
                   : AppTheme.primaryTeal),
@@ -863,7 +853,9 @@ class _DetailStack extends ConsumerWidget {
             note.isEmpty ? '无' : note,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               height: 1.6,
-              color: note.isEmpty ? AppTheme.textSecondary : AppTheme.textPrimary,
+              color: note.isEmpty
+                  ? AppTheme.textSecondary
+                  : AppTheme.textPrimary,
             ),
           ),
         ),
@@ -875,10 +867,7 @@ class _DetailStack extends ConsumerWidget {
           child: _CalloutBox(text: medication),
         ),
         const SizedBox(height: 14),
-        _TipCard(
-          title: '温馨提示',
-          text: _tipForPhase(displayPhase),
-        ),
+        _TipCard(title: '温馨提示', text: _tipForPhase(displayPhase)),
       ],
     );
   }
@@ -907,14 +896,10 @@ class _DetailStack extends ConsumerWidget {
       return '当前处于「${phase.label}」阶段，建议持续记录皮肤变化并坚持温和护理。';
     }
     return switch (builtin) {
-      AcnePhase.swollen =>
-        '红肿明显，可能伴有疼痛或触痛，建议避免挤压，注意消炎护理。',
-      AcnePhase.inflammatory =>
-        '炎症仍在恢复中，建议继续观察皮肤状态，减少刺激和摩擦。',
-      AcnePhase.stable =>
-        '状态相对稳定，重点是维持清洁和规律护理，避免反复刺激。',
-      AcnePhase.receding =>
-        '正在逐步消退，保持温和护理并持续记录变化，有助于观察恢复趋势。',
+      AcnePhase.swollen => '红肿明显，可能伴有疼痛或触痛，建议避免挤压，注意消炎护理。',
+      AcnePhase.inflammatory => '炎症仍在恢复中，建议继续观察皮肤状态，减少刺激和摩擦。',
+      AcnePhase.stable => '状态相对稳定，重点是维持清洁和规律护理，避免反复刺激。',
+      AcnePhase.receding => '正在逐步消退，保持温和护理并持续记录变化，有助于观察恢复趋势。',
     };
   }
 
@@ -924,14 +909,10 @@ class _DetailStack extends ConsumerWidget {
       return '保持皮肤清洁与规律作息，持续记录有助于观察恢复趋势。';
     }
     return switch (builtin) {
-      AcnePhase.swollen =>
-        '保持皮肤清洁，避免辛辣刺激食物和熬夜，多喝水有助于皮肤恢复。',
-      AcnePhase.inflammatory =>
-        '继续观察红肿范围，减少外部摩擦，保持作息稳定更有利于恢复。',
-      AcnePhase.stable =>
-        '维持当前护理节奏，按需补充保湿与防晒，防止状态再次波动。',
-      AcnePhase.receding =>
-        '恢复期也要坚持记录，后续对比会更清楚地看到变化轨迹。',
+      AcnePhase.swollen => '保持皮肤清洁，避免辛辣刺激食物和熬夜，多喝水有助于皮肤恢复。',
+      AcnePhase.inflammatory => '继续观察红肿范围，减少外部摩擦，保持作息稳定更有利于恢复。',
+      AcnePhase.stable => '维持当前护理节奏，按需补充保湿与防晒，防止状态再次波动。',
+      AcnePhase.receding => '恢复期也要坚持记录，后续对比会更清楚地看到变化轨迹。',
     };
   }
 }
@@ -989,17 +970,15 @@ class _InfoCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (badge != null) _Badge(text: badge!, color: badgeColor ?? color),
+              if (badge != null)
+                _Badge(text: badge!, color: badgeColor ?? color),
               if (actionLabel != null && onAction != null) ...[
                 const SizedBox(width: 8),
                 TextButton(onPressed: onAction, child: Text(actionLabel!)),
               ],
             ],
           ),
-          if (child is! SizedBox) ...[
-            const SizedBox(height: 14),
-            child,
-          ],
+          if (child is! SizedBox) ...[const SizedBox(height: 14), child],
         ],
       ),
     );
@@ -1098,7 +1077,10 @@ class _TipCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.lightbulb_outline_rounded, color: AppTheme.primaryTeal),
+              Icon(
+                Icons.lightbulb_outline_rounded,
+                color: AppTheme.primaryTeal,
+              ),
               const SizedBox(width: 10),
               Text(
                 title,
@@ -1211,9 +1193,9 @@ class _TopActionButton extends StatelessWidget {
       label: Text(label),
       style: TextButton.styleFrom(
         foregroundColor: color,
-        textStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-        ),
+        textStyle: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
       ),
     );
   }
