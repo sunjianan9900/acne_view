@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/database/database.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/face_region.dart';
 
@@ -12,9 +13,51 @@ final Map<FaceRegion, Color> faceRegionColors = {
   FaceRegion.jawline: const Color(0xFFED8F7E),
 };
 
-const String _faceOutlineAsset = 'assets/face_map/face_outline.png';
-const Size _faceOutlineSize = Size(1448, 1086);
-const Rect _faceContentFrame = Rect.fromLTWH(0.274, 0.022, 0.451, 0.924);
+const String faceOutlineAsset = 'assets/face_map/face_outline.png';
+const Size faceOutlineSize = Size(1448, 1086);
+const Rect faceContentFrame = Rect.fromLTWH(0.274, 0.022, 0.451, 0.924);
+
+const String _faceOutlineAsset = faceOutlineAsset;
+
+class FaceMapCoordinates {
+  FaceMapCoordinates._();
+
+  static Rect contentRect(Size size) {
+    return Rect.fromLTWH(
+      size.width * faceContentFrame.left,
+      size.height * faceContentFrame.top,
+      size.width * faceContentFrame.width,
+      size.height * faceContentFrame.height,
+    );
+  }
+
+  static Offset localFromNormalized(double nx, double ny, Size size) {
+    final face = contentRect(size);
+    return Offset(
+      face.left + nx.clamp(0.0, 1.0) * face.width,
+      face.top + ny.clamp(0.0, 1.0) * face.height,
+    );
+  }
+
+  static Offset? normalizedFromLocal(Offset local, Size size) {
+    final face = contentRect(size);
+    if (!face.contains(local)) return null;
+    return Offset(
+      (local.dx - face.left) / face.width,
+      (local.dy - face.top) / face.height,
+    );
+  }
+
+  static bool hasMapPosition(AcneSpot spot) =>
+      spot.faceMapX != null && spot.faceMapY != null;
+
+  static Offset? markerPosition(AcneSpot spot, Size size) {
+    final x = spot.faceMapX;
+    final y = spot.faceMapY;
+    if (x == null || y == null) return null;
+    return localFromNormalized(x, y, size);
+  }
+}
 
 class FaceMapWidget extends StatelessWidget {
   const FaceMapWidget({
@@ -69,14 +112,7 @@ class FaceMapPainter extends CustomPainter {
 
   final Map<String, int> regionCounts;
 
-  static Rect _contentRect(Size size) {
-    return Rect.fromLTWH(
-      size.width * _faceContentFrame.left,
-      size.height * _faceContentFrame.top,
-      size.width * _faceContentFrame.width,
-      size.height * _faceContentFrame.height,
-    );
-  }
+  static Rect _contentRect(Size size) => FaceMapCoordinates.contentRect(size);
 
   static final Map<FaceRegion, Path Function(Size)> _regionPaths = {
     FaceRegion.forehead: (s) {

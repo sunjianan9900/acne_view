@@ -16,6 +16,7 @@ import '../../shared/models/treatment_type.dart';
 import '../../shared/photo/add_photo_flow.dart';
 import '../../shared/widgets/douji_shell.dart';
 import '../face_map/add_spot_dialog.dart';
+import '../face_map/widgets/spot_face_map_widget.dart';
 import 'spot_detail_dialog.dart';
 
 Future<void> _addSpotFromHome(BuildContext context, WidgetRef ref) async {
@@ -79,7 +80,7 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
           rightPanel: isDesktop
-              ? _SpotDetailPanel(spot: selectedSpot)
+              ? _SpotDetailPanel(spot: selectedSpot, allSpots: spots)
               : null,
           child: HomeBody(
             spots: spots,
@@ -378,9 +379,10 @@ class _SpotTimelinePanel extends ConsumerWidget {
 }
 
 class _SpotDetailPanel extends ConsumerStatefulWidget {
-  const _SpotDetailPanel({required this.spot});
+  const _SpotDetailPanel({required this.spot, required this.allSpots});
 
   final AcneSpot? spot;
+  final List<AcneSpot> allSpots;
 
   @override
   ConsumerState<_SpotDetailPanel> createState() => _SpotDetailPanelState();
@@ -519,7 +521,12 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+        SpotFaceMapPreview(
+          spots: widget.allSpots,
+          selectedSpotId: spot.id,
+        ),
+        const SizedBox(height: 16),
         Text(
           '备注日志',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -529,8 +536,8 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
         const SizedBox(height: 10),
         TextField(
           controller: _noteController,
-          minLines: 8,
-          maxLines: 12,
+          minLines: 6,
+          maxLines: 10,
           decoration: const InputDecoration(
             hintText: '记录这颗痘痘的变化、观察、用药和任何想保留的日志',
           ),

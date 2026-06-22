@@ -37,9 +37,14 @@ class _SpySpotRepository implements AcneSpotRepository {
     required FaceRegion region,
     String title = '',
     String note = '',
+    double? faceMapX,
+    double? faceMapY,
   }) async {
     return 'fake';
   }
+
+  @override
+  Future<void> updateSpotMapPosition(String id, double? x, double? y) async {}
 
   @override
   Future<void> updateSpotNote(String id, String note) async {
@@ -134,6 +139,8 @@ void main() {
         createdAt: DateTime(2026, 1, 2),
         note: '',
         status: SpotStatus.active.id,
+        faceMapX: null,
+        faceMapY: null,
       ),
     ];
 
@@ -207,6 +214,8 @@ void main() {
         createdAt: DateTime(2026, 6, 22),
         note: '初始备注',
         status: SpotStatus.active.id,
+        faceMapX: null,
+        faceMapY: null,
       ),
     ];
 
@@ -246,6 +255,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('备注已保存'), findsOneWidget);
+    expect(find.text('拍照位置'), findsOneWidget);
     expect(repo.lastUpdatedSpotId, 'spot-home-1');
     expect(repo.lastUpdatedNote, '新增备注内容');
   });

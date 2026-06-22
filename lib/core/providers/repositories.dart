@@ -34,10 +34,15 @@ class AcneSpotRepository {
   Future<void> updateSpotNote(String id, String note) =>
       _db.updateSpotNote(id, note);
 
+  Future<void> updateSpotMapPosition(String id, double? x, double? y) =>
+      _db.updateSpotMapPosition(id, x, y);
+
   Future<String> createSpot({
     required FaceRegion region,
     String title = '',
     String note = '',
+    double? faceMapX,
+    double? faceMapY,
   }) async {
     final id = _uuid.v4();
     await _db.insertSpot(
@@ -48,6 +53,8 @@ class AcneSpotRepository {
         createdAt: DateTime.now(),
         note: Value(note),
         status: const Value('active'),
+        faceMapX: Value(faceMapX),
+        faceMapY: Value(faceMapY),
       ),
     );
     return id;

@@ -14,7 +14,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -24,6 +24,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await migrator.addColumn(acneSpots, acneSpots.title);
+      }
+      if (from < 4) {
+        await migrator.addColumn(acneSpots, acneSpots.faceMapX);
+        await migrator.addColumn(acneSpots, acneSpots.faceMapY);
       }
     },
   );
@@ -71,6 +75,15 @@ class AppDatabase extends _$AppDatabase {
   Future<int> updateSpotStatus(String id, String status) {
     return (update(acneSpots)..where((t) => t.id.equals(id))).write(
       AcneSpotsCompanion(status: Value(status)),
+    );
+  }
+
+  Future<int> updateSpotMapPosition(String id, double? x, double? y) {
+    return (update(acneSpots)..where((t) => t.id.equals(id))).write(
+      AcneSpotsCompanion(
+        faceMapX: Value(x),
+        faceMapY: Value(y),
+      ),
     );
   }
 

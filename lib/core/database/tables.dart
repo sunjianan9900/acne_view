@@ -7,6 +7,10 @@ class AcneSpots extends Table {
   DateTimeColumn get createdAt => dateTime()();
   TextColumn get note => text().withDefault(const Constant(''))();
   TextColumn get status => text().withDefault(const Constant('active'))();
+  RealColumn get faceMapX =>
+      real().nullable().withDefault(const Constant(null))();
+  RealColumn get faceMapY =>
+      real().nullable().withDefault(const Constant(null))();
 
   @override
   Set<Column> get primaryKey => {id};
