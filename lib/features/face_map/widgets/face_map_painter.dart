@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/database/database.dart';
+import '../../../shared/face_map/face_map_coordinates.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/face_region.dart';
+
+export '../../../shared/face_map/face_map_coordinates.dart';
 
 final Map<FaceRegion, Color> faceRegionColors = {
   FaceRegion.forehead: const Color(0xFF8FD3F4),
@@ -14,65 +16,10 @@ final Map<FaceRegion, Color> faceRegionColors = {
 };
 
 const String faceOutlineAsset = 'assets/face_map/face_outline.png';
-const Size faceOutlineSize = Size(1448, 1086);
-const Rect faceContentFrame = Rect.fromLTWH(0.274, 0.022, 0.451, 0.924);
+const Size faceOutlineSize = FaceMapCoordinates.faceOutlineSize;
+const Rect faceContentFrame = FaceMapCoordinates.faceContentFrame;
 
 const String _faceOutlineAsset = faceOutlineAsset;
-
-class FaceMapCoordinates {
-  FaceMapCoordinates._();
-
-  static Rect contentRect(Size size) {
-    return Rect.fromLTWH(
-      size.width * faceContentFrame.left,
-      size.height * faceContentFrame.top,
-      size.width * faceContentFrame.width,
-      size.height * faceContentFrame.height,
-    );
-  }
-
-  static Offset localFromNormalized(double nx, double ny, Size size) {
-    final face = contentRect(size);
-    return Offset(
-      face.left + nx.clamp(0.0, 1.0) * face.width,
-      face.top + ny.clamp(0.0, 1.0) * face.height,
-    );
-  }
-
-  static Offset? normalizedFromLocal(Offset local, Size size) {
-    final face = contentRect(size);
-    if (!face.contains(local)) return null;
-    return Offset(
-      (local.dx - face.left) / face.width,
-      (local.dy - face.top) / face.height,
-    );
-  }
-
-  static Offset? markerPosition(double? x, double? y, Size size) {
-    if (x == null || y == null) return null;
-    return localFromNormalized(x, y, size);
-  }
-
-  static Offset? markerRecordPosition(SpotFaceMarker marker, Size size) =>
-      localFromNormalized(marker.mapX, marker.mapY, size);
-
-  /// 标记圆点半径，相对面部内容区域等比缩放。
-  static double markerRadius(
-    Size canvasSize, {
-    bool selected = false,
-    bool dragging = false,
-  }) {
-    final face = contentRect(canvasSize);
-    final base = face.shortestSide * 0.022;
-    final scale = selected || dragging ? 1.12 : 1.0;
-    return (base * scale).clamp(2.5, 12.0);
-  }
-
-  static double markerHitRadius(Size canvasSize) {
-    final visual = markerRadius(canvasSize);
-    return (visual * 2.2).clamp(10.0, 20.0);
-  }
-}
 
 class FaceMapWidget extends StatelessWidget {
   const FaceMapWidget({
@@ -127,7 +74,14 @@ class FaceMapPainter extends CustomPainter {
 
   final Map<String, int> regionCounts;
 
-  static Rect _contentRect(Size size) => FaceMapCoordinates.contentRect(size);
+  static Rect _contentRect(Size size) {
+    return Rect.fromLTWH(
+      size.width * faceContentFrame.left,
+      size.height * faceContentFrame.top,
+      size.width * faceContentFrame.width,
+      size.height * faceContentFrame.height,
+    );
+  }
 
   static final Map<FaceRegion, Path Function(Size)> _regionPaths = {
     FaceRegion.forehead: (s) {

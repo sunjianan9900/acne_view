@@ -132,7 +132,11 @@ class _SpotFaceMapEditorDialogState
     Size size,
   ) {
     for (final marker in markers) {
-      final position = FaceMapCoordinates.markerRecordPosition(marker, size);
+      final position = FaceMapCoordinates.markerRecordPosition(
+        marker.mapX,
+        marker.mapY,
+        size,
+      );
       if (position == null) continue;
       if ((position - local).distance <= FaceMapCoordinates.markerHitRadius(size)) {
         return marker;
@@ -330,7 +334,8 @@ class _SpotFaceMapCanvasState extends State<SpotFaceMapCanvas> {
                 selected: marker.id == widget.selectedMarkerId,
                 dragging: marker.id == widget.draggingMarkerId,
                 position: FaceMapCoordinates.markerRecordPosition(
-                  marker,
+                  marker.mapX,
+                  marker.mapY,
                   size,
                 )!,
                 interactive: widget.interactive,

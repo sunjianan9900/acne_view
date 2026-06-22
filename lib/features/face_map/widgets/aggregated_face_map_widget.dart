@@ -39,7 +39,8 @@ class AggregatedFaceMapWidget extends StatelessWidget {
                 color: _markerColor(placed.spot),
                 highlighted: placed.spot.id == highlightedSpotId,
                 position: FaceMapCoordinates.markerRecordPosition(
-                  placed.marker,
+                  placed.marker.mapX,
+                  placed.marker.mapY,
                   size,
                 )!,
                 onTap: () => onMarkerTap(placed.spot.id),

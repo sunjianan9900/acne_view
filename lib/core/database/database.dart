@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'tables.dart';
+import '../../shared/face_map/face_map_coordinates.dart';
 
 part 'database.g.dart';
 
@@ -14,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -44,6 +45,22 @@ class AppDatabase extends _$AppDatabase {
               spotId: spot.id,
               mapX: x,
               mapY: y,
+            ),
+          );
+        }
+      }
+      if (from < 6) {
+        final markers = await select(spotFaceMarkers).get();
+        for (final marker in markers) {
+          final migrated = FaceMapCoordinates.migrateLegacyNormalized(
+            marker.mapX,
+            marker.mapY,
+          );
+          await (update(spotFaceMarkers)..where((t) => t.id.equals(marker.id)))
+              .write(
+            SpotFaceMarkersCompanion(
+              mapX: Value(migrated.dx),
+              mapY: Value(migrated.dy),
             ),
           );
         }
