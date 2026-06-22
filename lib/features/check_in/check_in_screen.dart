@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/preferences/custom_phase_labels.dart';
 import '../../core/preferences/custom_treatment_tags.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
@@ -323,7 +324,7 @@ class _PhotoPreview extends StatelessWidget {
   }
 }
 
-class _CheckInForm extends StatelessWidget {
+class _CheckInForm extends ConsumerWidget {
   const _CheckInForm({
     required this.noteController,
     required this.selectedPhase,
@@ -347,7 +348,8 @@ class _CheckInForm extends StatelessWidget {
   final VoidCallback onSave;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final phaseLabels = ref.watch(phaseLabelsProvider);
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -366,7 +368,7 @@ class _CheckInForm extends StatelessWidget {
               final selected = selectedPhase == phase;
               final color = acnePhaseColor(phase);
               return ChoiceChip(
-                label: Text(phase.label),
+                label: Text(phaseDisplayLabel(phase, phaseLabels)),
                 selected: selected,
                 onSelected: (_) => onPhaseChanged(phase),
                 selectedColor: color.withValues(alpha: 0.2),

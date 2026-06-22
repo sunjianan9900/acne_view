@@ -25,8 +25,10 @@ class DoujiShell extends StatelessWidget {
 
   static const _navItems = <_NavItem>[
     _NavItem(label: '概览', icon: Icons.home_outlined, route: '/'),
+    _NavItem(label: '实时预览', icon: Icons.videocam_outlined, route: '/live-preview'),
     _NavItem(label: '痘痘地图', icon: Icons.face_outlined, route: '/face-map'),
     _NavItem(label: '痘痘科普', icon: Icons.menu_book_outlined, route: '/acne-education'),
+    _NavItem(label: '标签管理', icon: Icons.label_outlined, route: '/tag-management'),
   ];
 
   @override

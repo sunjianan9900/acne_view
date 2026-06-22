@@ -5,12 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/database/database.dart';
+import '../../core/preferences/custom_phase_labels.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/acne_phase.dart';
 import '../../shared/photo/add_photo_flow.dart';
 import '../../shared/photo/photo_viewer.dart';
-import '../../shared/models/face_region.dart';
+import '../../shared/models/spot_display.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/models/treatment_type.dart';
 
@@ -40,13 +41,12 @@ class TimelineScreen extends ConsumerWidget {
           if (spot == null) {
             return const Center(child: Text('痘痘不存在'));
           }
-          final region = FaceRegion.fromId(spot.faceRegion);
           final status = SpotStatus.fromId(spot.status);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _SpotHeader(spot: spot, region: region, status: status),
+              _SpotHeader(spot: spot, status: status),
               Expanded(
                 child: checkInsAsync.when(
                   data: (checkIns) {
@@ -104,12 +104,10 @@ class TimelineScreen extends ConsumerWidget {
 class _SpotHeader extends StatelessWidget {
   const _SpotHeader({
     required this.spot,
-    required this.region,
     required this.status,
   });
 
   final AcneSpot spot;
-  final FaceRegion? region;
   final SpotStatus status;
 
   @override
@@ -139,13 +137,13 @@ class _SpotHeader extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${region?.label ?? spot.faceRegion} · ${status.label}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                children: [
+                  Text(
+                    spotDisplaySummary(spot),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
                 Text(
                   '追踪自 ${dateFormat.format(spot.createdAt)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -280,13 +278,14 @@ class _CheckInCard extends ConsumerWidget {
   }
 }
 
-class _PhaseChip extends StatelessWidget {
+class _PhaseChip extends ConsumerWidget {
   const _PhaseChip({required this.phase});
 
   final AcnePhase phase;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final phaseLabels = ref.watch(phaseLabelsProvider);
     final color = acnePhaseColor(phase);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -295,7 +294,7 @@ class _PhaseChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        phase.label,
+        phaseDisplayLabel(phase, phaseLabels),
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           color: color,
           fontWeight: FontWeight.w600,

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/database/database.dart';
+import '../../core/preferences/custom_phase_labels.dart';
 import '../../core/preferences/custom_treatment_tags.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
@@ -451,6 +452,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
   }
 
   Widget _buildEditForm(CheckInDetail detail) {
+    final phaseLabels = ref.watch(phaseLabelsProvider);
     final dateFormat = DateFormat('yyyy-MM-dd');
     final timeFormat = DateFormat('HH:mm');
 
@@ -498,7 +500,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
             final selected = _selectedPhase == phase;
             final color = acnePhaseColor(phase);
             return ChoiceChip(
-              label: Text(phase.label),
+              label: Text(phaseDisplayLabel(phase, phaseLabels)),
               selected: selected,
               onSelected: (_) => setState(() => _selectedPhase = phase),
               selectedColor: color.withValues(alpha: 0.2),
@@ -618,13 +620,14 @@ class _PhotoPanel extends StatelessWidget {
   }
 }
 
-class _PhaseTag extends StatelessWidget {
+class _PhaseTag extends ConsumerWidget {
   const _PhaseTag({required this.phase});
 
   final AcnePhase phase;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final phaseLabels = ref.watch(phaseLabelsProvider);
     final color = acnePhaseColor(phase);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -633,7 +636,7 @@ class _PhaseTag extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        phase.label,
+        phaseDisplayLabel(phase, phaseLabels),
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
           color: color,
           fontWeight: FontWeight.w600,
