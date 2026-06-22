@@ -134,12 +134,25 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
     }
   }
 
-  Future<void> _deleteCurrentSpot(AcneSpot spot) async {
+  Future<void> _deleteCurrentCheckIn(AcneSpot spot) async {
+    final items = await ref.read(spotTimelineProvider(spot.id).future);
+    final selectedItem = _resolveSelectedItem(items);
+    if (selectedItem == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('暂无打卡记录可删除')),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除痘痘'),
-        content: const Text('将删除该痘痘的所有记录和照片，此操作不可撤销。'),
+        title: const Text('删除打卡记录'),
+        content: const Text('将删除该条打卡的照片、用药和备注信息，此操作不可撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -156,12 +169,25 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await ref.read(spotRepositoryProvider).deleteSpot(spot.id);
+      final deletedId = selectedItem.checkIn.id;
+      await ref.read(checkInRepositoryProvider).deleteCheckIn(deletedId);
+      ref.invalidate(spotTimelineProvider(spot.id));
+      ref.invalidate(spotThumbnailProvider(spot.id));
+
+      if (!mounted) return;
+
+      final remaining = await ref.read(spotTimelineProvider(spot.id).future);
       if (mounted) {
-        Navigator.of(context).pop();
+        setState(() {
+          if (_currentCheckInId == deletedId) {
+            _currentCheckInId = remaining.isNotEmpty
+                ? remaining.first.checkIn.id
+                : null;
+          }
+        });
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('痘痘已删除')));
+        ).showSnackBar(const SnackBar(content: Text('记录已删除')));
       }
     } catch (e) {
       if (mounted) {
@@ -299,7 +325,7 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
           icon: Icons.delete_outline_rounded,
           label: '删除',
           color: Colors.red,
-          onPressed: () => _deleteCurrentSpot(spot),
+          onPressed: () => _deleteCurrentCheckIn(spot),
         ),
         const SizedBox(width: 12),
         _TopActionButton(
