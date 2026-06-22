@@ -16,6 +16,7 @@ class CheckInRecords extends Table {
   TextColumn get spotId => text().references(AcneSpots, #id)();
   DateTimeColumn get checkInDate => dateTime()();
   TextColumn get note => text().withDefault(const Constant(''))();
+  TextColumn get phase => text().withDefault(const Constant(''))();
 
   @override
   Set<Column> get primaryKey => {id};

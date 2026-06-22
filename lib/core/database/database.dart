@@ -14,13 +14,23 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.addColumn(checkInRecords, checkInRecords.phase);
+      }
+    },
+  );
 
   // --- Acne Spots ---
 
   Stream<List<AcneSpot>> watchAllSpots() {
-    return (select(acneSpots)..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
-        .watch();
+    return (select(
+      acneSpots,
+    )..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).watch();
   }
 
   Stream<List<AcneSpot>> watchSpotsByRegion(String regionId) {
@@ -50,14 +60,15 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<int> updateSpotStatus(String id, String status) {
-    return (update(acneSpots)..where((t) => t.id.equals(id)))
-        .write(AcneSpotsCompanion(status: Value(status)));
+    return (update(acneSpots)..where((t) => t.id.equals(id))).write(
+      AcneSpotsCompanion(status: Value(status)),
+    );
   }
 
   Future<int> deleteSpot(String id) async {
-    final checkIns = await (select(checkInRecords)
-          ..where((t) => t.spotId.equals(id)))
-        .get();
+    final checkIns = await (select(
+      checkInRecords,
+    )..where((t) => t.spotId.equals(id))).get();
     for (final checkIn in checkIns) {
       await deleteCheckIn(checkIn.id);
     }
@@ -98,19 +109,21 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<CheckInRecord?> getCheckIn(String id) {
-    return (select(checkInRecords)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(
+      checkInRecords,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<bool> hasCheckInToday(String spotId) async {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final end = start.add(const Duration(days: 1));
-    final result = await (select(checkInRecords)
-          ..where((t) => t.spotId.equals(spotId))
-          ..where((t) => t.checkInDate.isBiggerOrEqualValue(start))
-          ..where((t) => t.checkInDate.isSmallerThanValue(end)))
-        .get();
+    final result =
+        await (select(checkInRecords)
+              ..where((t) => t.spotId.equals(spotId))
+              ..where((t) => t.checkInDate.isBiggerOrEqualValue(start))
+              ..where((t) => t.checkInDate.isSmallerThanValue(end)))
+            .get();
     return result.isNotEmpty;
   }
 
@@ -130,6 +143,21 @@ class AppDatabase extends _$AppDatabase {
     return into(checkInRecords).insert(record);
   }
 
+  Future<int> updateCheckInRecord(
+    String id, {
+    required String phase,
+    required String note,
+    required DateTime checkInDate,
+  }) {
+    return (update(checkInRecords)..where((t) => t.id.equals(id))).write(
+      CheckInRecordsCompanion(
+        phase: Value(phase),
+        note: Value(note),
+        checkInDate: Value(checkInDate),
+      ),
+    );
+  }
+
   Future<int> deleteCheckIn(String id) async {
     await (delete(treatmentItems)..where((t) => t.checkInId.equals(id))).go();
     await (delete(photos)..where((t) => t.checkInId.equals(id))).go();
@@ -139,23 +167,37 @@ class AppDatabase extends _$AppDatabase {
   // --- Treatments ---
 
   Future<List<TreatmentItem>> getTreatmentsForCheckIn(String checkInId) {
-    return (select(treatmentItems)..where((t) => t.checkInId.equals(checkInId)))
-        .get();
+    return (select(
+      treatmentItems,
+    )..where((t) => t.checkInId.equals(checkInId))).get();
   }
 
   Future<int> insertTreatment(TreatmentItemsCompanion item) {
     return into(treatmentItems).insert(item);
   }
 
+  Future<int> deleteTreatmentsForCheckIn(String checkInId) {
+    return (delete(treatmentItems)
+          ..where((t) => t.checkInId.equals(checkInId)))
+        .go();
+  }
+
   // --- Photos ---
 
   Future<Photo?> getPhotoForCheckIn(String checkInId) {
-    return (select(photos)..where((t) => t.checkInId.equals(checkInId)))
-        .getSingleOrNull();
+    return (select(
+      photos,
+    )..where((t) => t.checkInId.equals(checkInId))).getSingleOrNull();
   }
 
   Future<int> insertPhoto(PhotosCompanion photo) {
     return into(photos).insert(photo);
+  }
+
+  Future<int> updatePhotoCapturedAt(String checkInId, DateTime capturedAt) {
+    return (update(photos)..where((t) => t.checkInId.equals(checkInId))).write(
+      PhotosCompanion(capturedAt: Value(capturedAt)),
+    );
   }
 }
 

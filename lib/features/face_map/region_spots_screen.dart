@@ -8,6 +8,7 @@ import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/face_region.dart';
 import '../../shared/models/spot_status.dart';
+import '../../shared/photo/add_photo_flow.dart';
 
 class RegionSpotsScreen extends ConsumerWidget {
   const RegionSpotsScreen({super.key, required this.regionId});
@@ -27,9 +28,7 @@ class RegionSpotsScreen extends ConsumerWidget {
     final spotsAsync = ref.watch(spotsByRegionProvider(regionId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${region.label} - 痘痘列表'),
-      ),
+      appBar: AppBar(title: Text('${region.label} - 痘痘列表')),
       body: spotsAsync.when(
         data: (spots) {
           if (spots.isEmpty) {
@@ -46,8 +45,8 @@ class RegionSpotsScreen extends ConsumerWidget {
                   Text(
                     '该区域暂无痘痘记录',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   FilledButton.icon(
@@ -86,9 +85,9 @@ class RegionSpotsScreen extends ConsumerWidget {
   ) async {
     await ref.read(spotRepositoryProvider).createSpot(region: region);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('痘痘已创建')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('痘痘已创建')));
     }
   }
 }
@@ -138,15 +137,15 @@ class _SpotCard extends ConsumerWidget {
                     Text(
                       '${region.label} · ${status.label}',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '创建于 ${dateFormat.format(spot.createdAt)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                     if (spot.note.isNotEmpty) ...[
                       const SizedBox(height: 4),
@@ -163,7 +162,7 @@ class _SpotCard extends ConsumerWidget {
               PopupMenuButton<String>(
                 onSelected: (value) async {
                   if (value == 'capture') {
-                    context.push('/capture/${spot.id}');
+                    showAddPhotoOptions(context, spot.id);
                   } else if (value == 'timeline') {
                     context.push('/timeline/${spot.id}');
                   } else if (value == 'heal') {
@@ -189,24 +188,17 @@ class _SpotCard extends ConsumerWidget {
                       ),
                     );
                     if (confirm == true) {
-                      await ref.read(spotRepositoryProvider).deleteSpot(spot.id);
+                      await ref
+                          .read(spotRepositoryProvider)
+                          .deleteSpot(spot.id);
                     }
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'capture',
-                    child: Text('拍照打卡'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'timeline',
-                    child: Text('查看时间线'),
-                  ),
+                  const PopupMenuItem(value: 'capture', child: Text('拍照打卡')),
+                  const PopupMenuItem(value: 'timeline', child: Text('查看时间线')),
                   if (status == SpotStatus.active)
-                    const PopupMenuItem(
-                      value: 'heal',
-                      child: Text('标记为已愈合'),
-                    ),
+                    const PopupMenuItem(value: 'heal', child: Text('标记为已愈合')),
                   const PopupMenuItem(
                     value: 'delete',
                     child: Text('删除', style: TextStyle(color: Colors.red)),

@@ -14,8 +14,7 @@ class HelpScreen extends StatelessWidget {
         children: [
           _Section(
             title: '关于痘迹',
-            content:
-                '痘迹是一款痘痘打卡观察 App，帮助你每天记录痘痘变化，追踪护理措施的效果。',
+            content: '痘迹是一款痘痘打卡观察 App，帮助你每天记录痘痘变化，追踪护理措施的效果。',
           ),
           _Section(
             title: '如何使用',
@@ -59,8 +58,8 @@ class HelpScreen extends StatelessWidget {
                     child: Text(
                       '内置摄像头适合日常记录；如需毛孔级观察，请使用 iPad 外接摄像头模式。',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -74,11 +73,7 @@ class HelpScreen extends StatelessWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({
-    required this.title,
-    this.content,
-    this.bullets,
-  });
+  const _Section({required this.title, this.content, this.bullets});
 
   final String title;
   final String? content;
@@ -94,18 +89,18 @@ class _Section extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
           ),
           const SizedBox(height: 8),
           if (content != null)
             Text(
               content!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                    height: 1.5,
-                  ),
+                color: AppTheme.textSecondary,
+                height: 1.5,
+              ),
             ),
           if (bullets != null)
             ...bullets!.map(
@@ -119,9 +114,9 @@ class _Section extends StatelessWidget {
                       child: Text(
                         b,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                              height: 1.5,
-                            ),
+                          color: AppTheme.textSecondary,
+                          height: 1.5,
+                        ),
                       ),
                     ),
                   ],

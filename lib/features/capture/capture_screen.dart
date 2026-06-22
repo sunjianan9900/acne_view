@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,6 +11,8 @@ import '../../core/camera/camera_service.dart';
 import '../../core/camera/external_camera_service.dart';
 import '../../core/providers/camera_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/photo/add_photo_flow.dart';
+import 'widgets/capture_viewport.dart';
 
 class CaptureScreen extends ConsumerStatefulWidget {
   const CaptureScreen({super.key, required this.spotId});
@@ -26,8 +29,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   String? _capturedPath;
   CameraService? _activeCamera;
 
-  CameraService get _camera =>
-      _activeCamera ?? ref.read(cameraServiceProvider);
+  CameraService get _camera => _activeCamera ?? ref.read(cameraServiceProvider);
 
   @override
   void initState() {
@@ -107,9 +109,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
       if (mounted) setState(() => _capturedPath = path);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('拍照失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('拍照失败: $e')));
       }
     }
   }
@@ -133,78 +135,108 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   void _confirmPhoto() {
     if (_capturedPath == null) return;
     final isExternal = _camera.currentDevice?.isExternal == true;
-    context.push('/check-in', extra: {
-      'spotId': widget.spotId,
-      'photoPath': _capturedPath,
-      'isExternalCamera': isExternal,
-    });
+    context.push(
+      '/check-in',
+      extra: {
+        'spotId': widget.spotId,
+        'photoPath': _capturedPath,
+        'isExternalCamera': isExternal,
+      },
+    );
+  }
+
+  bool get _canTakePicture =>
+      _error == null && !_initializing && _capturedPath == null;
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey != LogicalKeyboardKey.space) {
+      return KeyEventResult.ignored;
+    }
+    if (!_canTakePicture) return KeyEventResult.ignored;
+    _takePicture();
+    return KeyEventResult.handled;
   }
 
   @override
   Widget build(BuildContext context) {
     final camera = _camera;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: Scaffold(
         backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: const Text('拍摄痘痘'),
-      ),
-      body: _error != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.white54, size: 48),
-                    const SizedBox(height: 16),
-                    Text(
-                      '相机初始化失败',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white54, height: 1.4),
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: () {
-                        setState(() {
-                          _error = null;
-                          _initializing = true;
-                        });
-                        _initCamera();
-                      },
-                      child: const Text('重试'),
-                    ),
-                  ],
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          title: const Text('拍摄痘痘'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.photo_library_outlined),
+              tooltip: '从相册选择',
+              onPressed: () => pickImageAndCheckIn(context, widget.spotId),
+            ),
+          ],
+        ),
+        body: _error != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.white54,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '相机初始化失败',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () {
+                          setState(() {
+                            _error = null;
+                            _initializing = true;
+                          });
+                          _initCamera();
+                        },
+                        child: const Text('重试'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            )
-          : _capturedPath != null
-              ? _buildPreview()
-              : _buildCamera(camera),
+              )
+            : _capturedPath != null
+            ? _buildPreview()
+            : _buildCamera(camera),
+      ),
     );
   }
 
-  Widget _buildCamera(dynamic camera) {
+  Widget _buildCamera(CameraService camera) {
     return Column(
       children: [
-        Expanded(
+        CaptureViewport(
+          loading: _initializing,
           child: _initializing
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                )
-              : ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: camera.buildPreview(),
-                ),
+              ? const SizedBox.shrink()
+              : CapturePreviewFrame(camera: camera),
         ),
         if (camera.currentDevice != null)
           Padding(
@@ -215,7 +247,10 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                 if (camera.hasExternalCamera)
                   Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryTeal.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(8),
@@ -271,14 +306,9 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   Widget _buildPreview() {
     return Column(
       children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.file(
-              File(_capturedPath!),
-              fit: BoxFit.contain,
-              width: double.infinity,
-            ),
+        CaptureViewport(
+          child: SizedBox.expand(
+            child: Image.file(File(_capturedPath!), fit: BoxFit.cover),
           ),
         ),
         Padding(

@@ -407,8 +407,18 @@ class $CheckInRecordsTable extends CheckInRecords
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _phaseMeta = const VerificationMeta('phase');
   @override
-  List<GeneratedColumn> get $columns => [id, spotId, checkInDate, note];
+  late final GeneratedColumn<String> phase = GeneratedColumn<String>(
+    'phase',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, spotId, checkInDate, note, phase];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -451,6 +461,12 @@ class $CheckInRecordsTable extends CheckInRecords
         note.isAcceptableOrUnknown(data['note']!, _noteMeta),
       );
     }
+    if (data.containsKey('phase')) {
+      context.handle(
+        _phaseMeta,
+        phase.isAcceptableOrUnknown(data['phase']!, _phaseMeta),
+      );
+    }
     return context;
   }
 
@@ -476,6 +492,10 @@ class $CheckInRecordsTable extends CheckInRecords
         DriftSqlType.string,
         data['${effectivePrefix}note'],
       )!,
+      phase: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}phase'],
+      )!,
     );
   }
 
@@ -490,11 +510,13 @@ class CheckInRecord extends DataClass implements Insertable<CheckInRecord> {
   final String spotId;
   final DateTime checkInDate;
   final String note;
+  final String phase;
   const CheckInRecord({
     required this.id,
     required this.spotId,
     required this.checkInDate,
     required this.note,
+    required this.phase,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -503,6 +525,7 @@ class CheckInRecord extends DataClass implements Insertable<CheckInRecord> {
     map['spot_id'] = Variable<String>(spotId);
     map['check_in_date'] = Variable<DateTime>(checkInDate);
     map['note'] = Variable<String>(note);
+    map['phase'] = Variable<String>(phase);
     return map;
   }
 
@@ -512,6 +535,7 @@ class CheckInRecord extends DataClass implements Insertable<CheckInRecord> {
       spotId: Value(spotId),
       checkInDate: Value(checkInDate),
       note: Value(note),
+      phase: Value(phase),
     );
   }
 
@@ -525,6 +549,7 @@ class CheckInRecord extends DataClass implements Insertable<CheckInRecord> {
       spotId: serializer.fromJson<String>(json['spotId']),
       checkInDate: serializer.fromJson<DateTime>(json['checkInDate']),
       note: serializer.fromJson<String>(json['note']),
+      phase: serializer.fromJson<String>(json['phase']),
     );
   }
   @override
@@ -535,6 +560,7 @@ class CheckInRecord extends DataClass implements Insertable<CheckInRecord> {
       'spotId': serializer.toJson<String>(spotId),
       'checkInDate': serializer.toJson<DateTime>(checkInDate),
       'note': serializer.toJson<String>(note),
+      'phase': serializer.toJson<String>(phase),
     };
   }
 
@@ -543,11 +569,13 @@ class CheckInRecord extends DataClass implements Insertable<CheckInRecord> {
     String? spotId,
     DateTime? checkInDate,
     String? note,
+    String? phase,
   }) => CheckInRecord(
     id: id ?? this.id,
     spotId: spotId ?? this.spotId,
     checkInDate: checkInDate ?? this.checkInDate,
     note: note ?? this.note,
+    phase: phase ?? this.phase,
   );
   CheckInRecord copyWithCompanion(CheckInRecordsCompanion data) {
     return CheckInRecord(
@@ -557,6 +585,7 @@ class CheckInRecord extends DataClass implements Insertable<CheckInRecord> {
           ? data.checkInDate.value
           : this.checkInDate,
       note: data.note.present ? data.note.value : this.note,
+      phase: data.phase.present ? data.phase.value : this.phase,
     );
   }
 
@@ -566,13 +595,14 @@ class CheckInRecord extends DataClass implements Insertable<CheckInRecord> {
           ..write('id: $id, ')
           ..write('spotId: $spotId, ')
           ..write('checkInDate: $checkInDate, ')
-          ..write('note: $note')
+          ..write('note: $note, ')
+          ..write('phase: $phase')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, spotId, checkInDate, note);
+  int get hashCode => Object.hash(id, spotId, checkInDate, note, phase);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -580,7 +610,8 @@ class CheckInRecord extends DataClass implements Insertable<CheckInRecord> {
           other.id == this.id &&
           other.spotId == this.spotId &&
           other.checkInDate == this.checkInDate &&
-          other.note == this.note);
+          other.note == this.note &&
+          other.phase == this.phase);
 }
 
 class CheckInRecordsCompanion extends UpdateCompanion<CheckInRecord> {
@@ -588,12 +619,14 @@ class CheckInRecordsCompanion extends UpdateCompanion<CheckInRecord> {
   final Value<String> spotId;
   final Value<DateTime> checkInDate;
   final Value<String> note;
+  final Value<String> phase;
   final Value<int> rowid;
   const CheckInRecordsCompanion({
     this.id = const Value.absent(),
     this.spotId = const Value.absent(),
     this.checkInDate = const Value.absent(),
     this.note = const Value.absent(),
+    this.phase = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CheckInRecordsCompanion.insert({
@@ -601,6 +634,7 @@ class CheckInRecordsCompanion extends UpdateCompanion<CheckInRecord> {
     required String spotId,
     required DateTime checkInDate,
     this.note = const Value.absent(),
+    this.phase = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        spotId = Value(spotId),
@@ -610,6 +644,7 @@ class CheckInRecordsCompanion extends UpdateCompanion<CheckInRecord> {
     Expression<String>? spotId,
     Expression<DateTime>? checkInDate,
     Expression<String>? note,
+    Expression<String>? phase,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -617,6 +652,7 @@ class CheckInRecordsCompanion extends UpdateCompanion<CheckInRecord> {
       if (spotId != null) 'spot_id': spotId,
       if (checkInDate != null) 'check_in_date': checkInDate,
       if (note != null) 'note': note,
+      if (phase != null) 'phase': phase,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -626,6 +662,7 @@ class CheckInRecordsCompanion extends UpdateCompanion<CheckInRecord> {
     Value<String>? spotId,
     Value<DateTime>? checkInDate,
     Value<String>? note,
+    Value<String>? phase,
     Value<int>? rowid,
   }) {
     return CheckInRecordsCompanion(
@@ -633,6 +670,7 @@ class CheckInRecordsCompanion extends UpdateCompanion<CheckInRecord> {
       spotId: spotId ?? this.spotId,
       checkInDate: checkInDate ?? this.checkInDate,
       note: note ?? this.note,
+      phase: phase ?? this.phase,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -652,6 +690,9 @@ class CheckInRecordsCompanion extends UpdateCompanion<CheckInRecord> {
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
+    if (phase.present) {
+      map['phase'] = Variable<String>(phase.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -665,6 +706,7 @@ class CheckInRecordsCompanion extends UpdateCompanion<CheckInRecord> {
           ..write('spotId: $spotId, ')
           ..write('checkInDate: $checkInDate, ')
           ..write('note: $note, ')
+          ..write('phase: $phase, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1714,6 +1756,7 @@ typedef $$CheckInRecordsTableCreateCompanionBuilder =
       required String spotId,
       required DateTime checkInDate,
       Value<String> note,
+      Value<String> phase,
       Value<int> rowid,
     });
 typedef $$CheckInRecordsTableUpdateCompanionBuilder =
@@ -1722,6 +1765,7 @@ typedef $$CheckInRecordsTableUpdateCompanionBuilder =
       Value<String> spotId,
       Value<DateTime> checkInDate,
       Value<String> note,
+      Value<String> phase,
       Value<int> rowid,
     });
 
@@ -1809,6 +1853,11 @@ class $$CheckInRecordsTableFilterComposer
 
   ColumnFilters<String> get note => $composableBuilder(
     column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get phase => $composableBuilder(
+    column: $table.phase,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1910,6 +1959,11 @@ class $$CheckInRecordsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get phase => $composableBuilder(
+    column: $table.phase,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$AcneSpotsTableOrderingComposer get spotId {
     final $$AcneSpotsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -1953,6 +2007,9 @@ class $$CheckInRecordsTableAnnotationComposer
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get phase =>
+      $composableBuilder(column: $table.phase, builder: (column) => column);
 
   $$AcneSpotsTableAnnotationComposer get spotId {
     final $$AcneSpotsTableAnnotationComposer composer = $composerBuilder(
@@ -2066,12 +2123,14 @@ class $$CheckInRecordsTableTableManager
                 Value<String> spotId = const Value.absent(),
                 Value<DateTime> checkInDate = const Value.absent(),
                 Value<String> note = const Value.absent(),
+                Value<String> phase = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CheckInRecordsCompanion(
                 id: id,
                 spotId: spotId,
                 checkInDate: checkInDate,
                 note: note,
+                phase: phase,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2080,12 +2139,14 @@ class $$CheckInRecordsTableTableManager
                 required String spotId,
                 required DateTime checkInDate,
                 Value<String> note = const Value.absent(),
+                Value<String> phase = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CheckInRecordsCompanion.insert(
                 id: id,
                 spotId: spotId,
                 checkInDate: checkInDate,
                 note: note,
+                phase: phase,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

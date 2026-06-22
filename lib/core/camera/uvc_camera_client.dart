@@ -4,7 +4,8 @@ import 'package:acne_uvc_camera_ios/acne_uvc_camera_ios.dart' as ios;
 import 'package:acne_uvc_camera_macos/acne_uvc_camera_macos.dart' as macos;
 import 'package:flutter/foundation.dart';
 
-export 'package:acne_uvc_camera_ios/acne_uvc_camera_ios.dart' show UvcCameraDevice;
+export 'package:acne_uvc_camera_ios/acne_uvc_camera_ios.dart'
+    show UvcCameraDevice;
 
 /// 跨平台 UVC 相机 API（iOS iPad / macOS）
 class UvcCamera {
@@ -49,7 +50,9 @@ class UvcCamera {
       return ios.AcneUvcCameraIos.initialize(preferExternal: preferExternal);
     }
     if (_isMacOS) {
-      return macos.AcneUvcCameraMacos.initialize(preferExternal: preferExternal);
+      return macos.AcneUvcCameraMacos.initialize(
+        preferExternal: preferExternal,
+      );
     }
     return -1;
   }

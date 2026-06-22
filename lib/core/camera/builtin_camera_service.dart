@@ -78,6 +78,13 @@ class BuiltinCameraService implements CameraService {
   }
 
   @override
+  double? get previewAspectRatio {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return null;
+    return controller.value.aspectRatio;
+  }
+
+  @override
   Future<void> dispose() async {
     await _controller?.dispose();
     _controller = null;
@@ -97,9 +104,6 @@ class BuiltinCameraService implements CameraService {
     if (_controller == null || !isInitialized) {
       return const Center(child: CircularProgressIndicator());
     }
-    return Transform.flip(
-      flipX: true,
-      child: CameraPreview(_controller!),
-    );
+    return Transform.flip(flipX: true, child: CameraPreview(_controller!));
   }
 }

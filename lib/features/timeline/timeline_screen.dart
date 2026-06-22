@@ -2,12 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/database/database.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/models/acne_phase.dart';
+import '../../shared/photo/add_photo_flow.dart';
+import '../../shared/photo/photo_viewer.dart';
 import '../../shared/models/face_region.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/models/treatment_type.dart';
@@ -27,9 +29,9 @@ class TimelineScreen extends ConsumerWidget {
         title: const Text('变化时间线'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.camera_alt),
-            onPressed: () => context.push('/capture/$spotId'),
-            tooltip: '拍照打卡',
+            icon: const Icon(Icons.add_a_photo_outlined),
+            onPressed: () => showAddPhotoOptions(context, spotId),
+            tooltip: '添加照片',
           ),
         ],
       ),
@@ -56,15 +58,18 @@ class TimelineScreen extends ConsumerWidget {
                             Icon(
                               Icons.timeline,
                               size: 64,
-                              color: AppTheme.primaryTeal.withValues(alpha: 0.4),
+                              color: AppTheme.primaryTeal.withValues(
+                                alpha: 0.4,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             const Text('还没有打卡记录'),
                             const SizedBox(height: 24),
                             FilledButton.icon(
-                              onPressed: () => context.push('/capture/$spotId'),
-                              icon: const Icon(Icons.camera_alt),
-                              label: const Text('开始第一次打卡'),
+                              onPressed: () =>
+                                  showAddPhotoOptions(context, spotId),
+                              icon: const Icon(Icons.add_a_photo_outlined),
+                              label: const Text('添加第一张照片'),
                             ),
                           ],
                         ),
@@ -138,14 +143,14 @@ class _SpotHeader extends StatelessWidget {
                 Text(
                   '${region?.label ?? spot.faceRegion} · ${status.label}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 Text(
                   '追踪自 ${dateFormat.format(spot.createdAt)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -166,10 +171,7 @@ class _CheckInCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
 
-    return FutureBuilder<({
-      Photo? photo,
-      List<TreatmentItem> treatments,
-    })>(
+    return FutureBuilder<({Photo? photo, List<TreatmentItem> treatments})>(
       future: () async {
         final repo = ref.read(checkInRepositoryProvider);
         final photo = await repo.getPhoto(checkIn.id);
@@ -185,7 +187,7 @@ class _CheckInCard extends ConsumerWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: photo != null
-                ? () => _openPhotoViewer(context, photo.filePath)
+                ? () => showPhotoViewer(context, photo.filePath)
                 : null,
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -225,11 +227,13 @@ class _CheckInCard extends ConsumerWidget {
                       children: [
                         Text(
                           dateFormat.format(checkIn.checkInDate),
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
+                        if (checkIn.phase.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          _PhaseChip(phase: AcnePhase.fromId(checkIn.phase)),
+                        ],
                         if (checkIn.note.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
@@ -274,35 +278,27 @@ class _CheckInCard extends ConsumerWidget {
       },
     );
   }
-
-  void _openPhotoViewer(BuildContext context, String filePath) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _PhotoViewerScreen(filePath: filePath),
-      ),
-    );
-  }
 }
 
-class _PhotoViewerScreen extends StatelessWidget {
-  const _PhotoViewerScreen({required this.filePath});
+class _PhaseChip extends StatelessWidget {
+  const _PhaseChip({required this.phase});
 
-  final String filePath;
+  final AcnePhase phase;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: const Text('照片详情'),
+    final color = acnePhaseColor(phase);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
       ),
-      body: InteractiveViewer(
-        minScale: 0.5,
-        maxScale: 4.0,
-        child: Center(
-          child: Image.file(File(filePath), fit: BoxFit.contain),
+      child: Text(
+        phase.label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

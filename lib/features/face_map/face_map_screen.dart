@@ -6,9 +6,10 @@ import 'package:intl/intl.dart';
 import '../../core/database/database.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/models/face_region.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/widgets/douji_shell.dart';
-import '../../shared/models/face_region.dart';
+import 'add_spot_dialog.dart';
 import 'widgets/face_map_painter.dart';
 
 class FaceMapScreen extends ConsumerWidget {
@@ -25,7 +26,7 @@ class FaceMapScreen extends ConsumerWidget {
       subtitle: '点击面部区域查看痘痘，或新增记录',
       actions: [
         FilledButton.icon(
-          onPressed: () => _showAddSpotDialog(context, ref),
+          onPressed: () => _addSpot(context, ref),
           icon: const Icon(Icons.add),
           label: const Text('添加痘痘'),
         ),
@@ -65,66 +66,17 @@ class FaceMapScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showAddSpotDialog(BuildContext context, WidgetRef ref) async {
-    FaceRegion? selected = FaceRegion.forehead;
-    final noteController = TextEditingController();
+  Future<void> _addSpot(BuildContext context, WidgetRef ref) async {
+    final spotId = await showAddSpotDialog(context, ref);
+    if (spotId == null || !context.mounted) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: const Text('新增痘痘'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<FaceRegion>(
-                initialValue: selected,
-                decoration: const InputDecoration(labelText: '面部区域'),
-                items: FaceRegion.values
-                    .map(
-                      (r) => DropdownMenuItem(value: r, child: Text(r.label)),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => selected = v),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: noteController,
-                decoration: const InputDecoration(
-                  labelText: '备注（可选）',
-                  hintText: '例如：红肿型',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('创建'),
-            ),
-          ],
-        ),
-      ),
-    );
+    final spot = await ref.read(spotRepositoryProvider).getSpot(spotId);
+    if (!context.mounted || spot == null) return;
 
-    if (confirmed == true && selected != null && context.mounted) {
-      await ref
-          .read(spotRepositoryProvider)
-          .createSpot(region: selected!, note: noteController.text);
-      noteController.dispose();
-      if (context.mounted) {
-        context.push('/region/${selected!.id}');
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('痘痘已创建')));
-      }
-    } else {
-      noteController.dispose();
-    }
+    context.push('/region/${spot.faceRegion}');
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('痘痘已创建')));
   }
 }
 

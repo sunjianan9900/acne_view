@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'camera_service.dart';
+import 'capture_aspect.dart';
 import 'uvc_camera_client.dart';
 
 /// 外接 UVC 摄像头实现（iPad / macOS USB 摄像头）
@@ -68,6 +69,9 @@ class ExternalCameraService implements CameraService {
   }
 
   @override
+  double? get previewAspectRatio => kCaptureAspectRatio;
+
+  @override
   Future<void> dispose() async {
     await UvcCamera.dispose();
     _initialized = false;
@@ -96,9 +100,6 @@ class ExternalCameraService implements CameraService {
     if (!isInitialized) {
       return const Center(child: CircularProgressIndicator());
     }
-    return Transform.flip(
-      flipX: true,
-      child: Texture(textureId: _textureId),
-    );
+    return Transform.flip(flipX: true, child: Texture(textureId: _textureId));
   }
 }

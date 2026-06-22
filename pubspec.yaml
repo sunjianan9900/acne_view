@@ -24,6 +24,9 @@ dependencies:
     path: packages/acne_uvc_camera_ios
   acne_uvc_camera_macos:
     path: packages/acne_uvc_camera_macos
+  window_manager: ^0.5.1
+  shared_preferences: ^2.5.3
+  file_picker: ^10.1.9
 
 dev_dependencies:
   flutter_test:
@@ -34,3 +37,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/ance/
+    - assets/face_map/

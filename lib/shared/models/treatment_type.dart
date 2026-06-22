@@ -27,4 +27,5 @@ const List<String> commonTreatmentTags = [
   '清洁面膜',
   '针清',
   '热敷',
+  '痘痘贴',
 ];

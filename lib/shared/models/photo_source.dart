@@ -1,6 +1,7 @@
 enum PhotoSource {
   builtin('builtin', '内置摄像头'),
-  external('external', '外接摄像头');
+  external('external', '外接摄像头'),
+  gallery('gallery', '相册上传');
 
   const PhotoSource(this.id, this.label);
 

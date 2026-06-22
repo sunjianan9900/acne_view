@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/database.dart';
+import '../../shared/models/acne_phase.dart';
 import '../../shared/models/face_region.dart';
 import '../../shared/models/photo_source.dart';
 import '../../shared/models/spot_status.dart';
@@ -85,11 +86,38 @@ class CheckInRepository {
   Future<Photo?> getPhoto(String checkInId) =>
       _db.getPhotoForCheckIn(checkInId);
 
+  Future<Photo?> getLatestPhotoForSpot(String spotId) async {
+    final checkIns = await _db.getCheckInsForSpot(spotId);
+    for (final checkIn in checkIns) {
+      final photo = await _db.getPhotoForCheckIn(checkIn.id);
+      if (photo != null) return photo;
+    }
+    return null;
+  }
+
+  Future<List<SpotCheckInPhoto>> getTimelineForSpot(String spotId) async {
+    final checkIns = await _db.getCheckInsForSpot(spotId);
+    final timeline = <SpotCheckInPhoto>[];
+    for (final checkIn in checkIns) {
+      final photo = await _db.getPhotoForCheckIn(checkIn.id);
+      final treatments = await _db.getTreatmentsForCheckIn(checkIn.id);
+      timeline.add(
+        SpotCheckInPhoto(
+          checkIn: checkIn,
+          photo: photo,
+          treatments: treatments,
+        ),
+      );
+    }
+    return timeline;
+  }
+
   Future<String> createCheckIn({
     required String spotId,
     required String photoSourcePath,
     required PhotoSource source,
     required List<TreatmentEntry> treatments,
+    required AcnePhase phase,
     String note = '',
     DateTime? checkInDate,
   }) async {
@@ -102,6 +130,7 @@ class CheckInRepository {
         spotId: spotId,
         checkInDate: now,
         note: Value(note),
+        phase: Value(phase.id),
       ),
     );
 
@@ -136,6 +165,58 @@ class CheckInRepository {
 
     return checkInId;
   }
+
+  Future<CheckInDetail?> getCheckInDetail(String checkInId) async {
+    final checkIn = await _db.getCheckIn(checkInId);
+    if (checkIn == null) return null;
+    final photo = await _db.getPhotoForCheckIn(checkInId);
+    final treatments = await _db.getTreatmentsForCheckIn(checkInId);
+    return CheckInDetail(
+      checkIn: checkIn,
+      photo: photo,
+      treatments: treatments,
+    );
+  }
+
+  Future<void> updateCheckIn({
+    required String checkInId,
+    required AcnePhase phase,
+    required String note,
+    required DateTime checkInDate,
+    required List<TreatmentEntry> treatments,
+  }) async {
+    await _db.updateCheckInRecord(
+      checkInId,
+      phase: phase.id,
+      note: note,
+      checkInDate: checkInDate,
+    );
+    final photo = await _db.getPhotoForCheckIn(checkInId);
+    if (photo != null) {
+      await _db.updatePhotoCapturedAt(checkInId, checkInDate);
+    }
+    await _db.deleteTreatmentsForCheckIn(checkInId);
+    for (final treatment in treatments) {
+      if (treatment.name.trim().isEmpty) continue;
+      await _db.insertTreatment(
+        TreatmentItemsCompanion.insert(
+          id: _uuid.v4(),
+          checkInId: checkInId,
+          type: treatment.type.id,
+          name: treatment.name.trim(),
+          dosage: Value(treatment.dosage),
+        ),
+      );
+    }
+  }
+
+  Future<void> deleteCheckIn(String checkInId) async {
+    final photo = await _db.getPhotoForCheckIn(checkInId);
+    if (photo != null) {
+      await PhotoStorage.deletePhoto(photo.filePath);
+    }
+    await _db.deleteCheckIn(checkInId);
+  }
 }
 
 class TreatmentEntry {
@@ -144,6 +225,30 @@ class TreatmentEntry {
   final TreatmentType type;
   final String name;
   final String dosage;
+}
+
+class SpotCheckInPhoto {
+  const SpotCheckInPhoto({
+    required this.checkIn,
+    required this.photo,
+    this.treatments = const [],
+  });
+
+  final CheckInRecord checkIn;
+  final Photo? photo;
+  final List<TreatmentItem> treatments;
+}
+
+class CheckInDetail {
+  const CheckInDetail({
+    required this.checkIn,
+    required this.photo,
+    required this.treatments,
+  });
+
+  final CheckInRecord checkIn;
+  final Photo? photo;
+  final List<TreatmentItem> treatments;
 }
 
 final spotRepositoryProvider = Provider<AcneSpotRepository>((ref) {
@@ -189,4 +294,27 @@ final spotsByRegionProvider = StreamProvider.family<List<AcneSpot>, String>((
 
 final allSpotsProvider = StreamProvider<List<AcneSpot>>((ref) {
   return ref.watch(spotRepositoryProvider).watchAllSpots();
+});
+
+final selectedHomeSpotIdProvider = StateProvider<String?>((ref) => null);
+
+final spotTimelineProvider =
+    FutureProvider.family<List<SpotCheckInPhoto>, String>((ref, spotId) async {
+      ref.watch(checkInsForSpotProvider(spotId));
+      return ref.read(checkInRepositoryProvider).getTimelineForSpot(spotId);
+    });
+
+final spotThumbnailProvider = FutureProvider.family<Photo?, String>((
+  ref,
+  spotId,
+) async {
+  ref.watch(checkInsForSpotProvider(spotId));
+  return ref.read(checkInRepositoryProvider).getLatestPhotoForSpot(spotId);
+});
+
+final checkInDetailProvider = FutureProvider.family<CheckInDetail?, String>((
+  ref,
+  checkInId,
+) {
+  return ref.watch(checkInRepositoryProvider).getCheckInDetail(checkInId);
 });

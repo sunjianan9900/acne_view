@@ -4,13 +4,17 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/face_region.dart';
 
 final Map<FaceRegion, Color> faceRegionColors = {
-  FaceRegion.forehead: const Color(0xFF90E0EF),
-  FaceRegion.leftCheek: const Color(0xFFA8DADC),
-  FaceRegion.rightCheek: const Color(0xFFB8E0D2),
-  FaceRegion.nose: const Color(0xFFE9C46A),
-  FaceRegion.chin: const Color(0xFFF4A261),
-  FaceRegion.jawline: const Color(0xFFE76F51),
+  FaceRegion.forehead: const Color(0xFF8FD3F4),
+  FaceRegion.leftCheek: const Color(0xFFAED9D6),
+  FaceRegion.rightCheek: const Color(0xFFCDE4D6),
+  FaceRegion.nose: const Color(0xFFF0D36B),
+  FaceRegion.chin: const Color(0xFFF5B08A),
+  FaceRegion.jawline: const Color(0xFFED8F7E),
 };
+
+const String _faceOutlineAsset = 'assets/face_map/face_outline.png';
+const Size _faceOutlineSize = Size(1448, 1086);
+const Rect _faceContentFrame = Rect.fromLTWH(0.274, 0.022, 0.451, 0.924);
 
 class FaceMapWidget extends StatelessWidget {
   const FaceMapWidget({
@@ -26,22 +30,34 @@ class FaceMapWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return CustomPaint(
-          painter: FaceMapPainter(
-            regionCounts: regionCounts,
-            onRegionTap: onRegionTap,
-          ),
-          size: Size(constraints.maxWidth, constraints.maxHeight),
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapUp: (details) {
-              final region = FaceMapPainter.hitTestRegion(
-                details.localPosition,
-                Size(constraints.maxWidth, constraints.maxHeight),
-              );
-              if (region != null) onRegionTap(region);
-            },
-          ),
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                _faceOutlineAsset,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ),
+            ),
+            Positioned.fill(
+              child: CustomPaint(
+                painter: FaceMapPainter(regionCounts: regionCounts),
+              ),
+            ),
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTapUp: (details) {
+                  final region = FaceMapPainter.hitTestRegion(
+                    details.localPosition,
+                    constraints.biggest,
+                  );
+                  if (region != null) onRegionTap(region);
+                },
+              ),
+            ),
+          ],
         );
       },
     );
@@ -49,74 +65,156 @@ class FaceMapWidget extends StatelessWidget {
 }
 
 class FaceMapPainter extends CustomPainter {
-  FaceMapPainter({
-    required this.regionCounts,
-    required this.onRegionTap,
-  });
+  FaceMapPainter({required this.regionCounts});
 
   final Map<String, int> regionCounts;
-  final void Function(FaceRegion region) onRegionTap;
+
+  static Rect _contentRect(Size size) {
+    return Rect.fromLTWH(
+      size.width * _faceContentFrame.left,
+      size.height * _faceContentFrame.top,
+      size.width * _faceContentFrame.width,
+      size.height * _faceContentFrame.height,
+    );
+  }
+
+  static Offset _p(Rect rect, double x, double y) {
+    return Offset(rect.left + rect.width * x, rect.top + rect.height * y);
+  }
 
   static final Map<FaceRegion, Path Function(Size)> _regionPaths = {
     FaceRegion.forehead: (s) {
+      final face = _contentRect(s);
       final path = Path();
-      path.moveTo(s.width * 0.25, s.height * 0.12);
+      path.moveTo(face.left + face.width * 0.27, face.top + face.height * 0.05);
       path.quadraticBezierTo(
-        s.width * 0.5, s.height * 0.02,
-        s.width * 0.75, s.height * 0.12,
+        face.left + face.width * 0.50,
+        face.top + face.height * 0.00,
+        face.left + face.width * 0.73,
+        face.top + face.height * 0.05,
       );
-      path.lineTo(s.width * 0.68, s.height * 0.28);
-      path.lineTo(s.width * 0.32, s.height * 0.28);
+      path.lineTo(face.left + face.width * 0.69, face.top + face.height * 0.21);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.50,
+        face.top + face.height * 0.18,
+        face.left + face.width * 0.31,
+        face.top + face.height * 0.21,
+      );
       path.close();
       return path;
     },
     FaceRegion.leftCheek: (s) {
+      final face = _contentRect(s);
       final path = Path();
-      path.moveTo(s.width * 0.18, s.height * 0.32);
-      path.lineTo(s.width * 0.38, s.height * 0.35);
-      path.lineTo(s.width * 0.35, s.height * 0.58);
-      path.lineTo(s.width * 0.15, s.height * 0.52);
+      path.moveTo(face.left + face.width * 0.11, face.top + face.height * 0.33);
+      path.lineTo(face.left + face.width * 0.32, face.top + face.height * 0.35);
+      path.lineTo(face.left + face.width * 0.29, face.top + face.height * 0.60);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.19,
+        face.top + face.height * 0.71,
+        face.left + face.width * 0.10,
+        face.top + face.height * 0.61,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.07,
+        face.top + face.height * 0.43,
+        face.left + face.width * 0.11,
+        face.top + face.height * 0.33,
+      );
       path.close();
       return path;
     },
     FaceRegion.rightCheek: (s) {
+      final face = _contentRect(s);
       final path = Path();
-      path.moveTo(s.width * 0.82, s.height * 0.32);
-      path.lineTo(s.width * 0.62, s.height * 0.35);
-      path.lineTo(s.width * 0.65, s.height * 0.58);
-      path.lineTo(s.width * 0.85, s.height * 0.52);
+      path.moveTo(face.left + face.width * 0.89, face.top + face.height * 0.33);
+      path.lineTo(face.left + face.width * 0.68, face.top + face.height * 0.35);
+      path.lineTo(face.left + face.width * 0.71, face.top + face.height * 0.60);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.81,
+        face.top + face.height * 0.71,
+        face.left + face.width * 0.90,
+        face.top + face.height * 0.61,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.93,
+        face.top + face.height * 0.43,
+        face.left + face.width * 0.89,
+        face.top + face.height * 0.33,
+      );
       path.close();
       return path;
     },
     FaceRegion.nose: (s) {
+      final face = _contentRect(s);
       final path = Path();
-      path.moveTo(s.width * 0.44, s.height * 0.30);
-      path.lineTo(s.width * 0.56, s.height * 0.30);
-      path.lineTo(s.width * 0.54, s.height * 0.48);
-      path.lineTo(s.width * 0.46, s.height * 0.48);
+      path.moveTo(face.left + face.width * 0.45, face.top + face.height * 0.33);
+      path.lineTo(face.left + face.width * 0.55, face.top + face.height * 0.33);
+      path.lineTo(face.left + face.width * 0.58, face.top + face.height * 0.46);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.50,
+        face.top + face.height * 0.55,
+        face.left + face.width * 0.42,
+        face.top + face.height * 0.46,
+      );
       path.close();
       return path;
     },
     FaceRegion.chin: (s) {
+      final face = _contentRect(s);
       final path = Path();
-      path.moveTo(s.width * 0.35, s.height * 0.58);
-      path.lineTo(s.width * 0.65, s.height * 0.58);
+      path.moveTo(face.left + face.width * 0.41, face.top + face.height * 0.65);
       path.quadraticBezierTo(
-        s.width * 0.5, s.height * 0.78,
-        s.width * 0.35, s.height * 0.58,
+        face.left + face.width * 0.50,
+        face.top + face.height * 0.72,
+        face.left + face.width * 0.59,
+        face.top + face.height * 0.65,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.64,
+        face.top + face.height * 0.79,
+        face.left + face.width * 0.50,
+        face.top + face.height * 0.86,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.36,
+        face.top + face.height * 0.79,
+        face.left + face.width * 0.41,
+        face.top + face.height * 0.65,
       );
       path.close();
       return path;
     },
     FaceRegion.jawline: (s) {
+      final face = _contentRect(s);
       final path = Path();
-      path.moveTo(s.width * 0.15, s.height * 0.52);
+      path.moveTo(face.left + face.width * 0.08, face.top + face.height * 0.57);
       path.quadraticBezierTo(
-        s.width * 0.5, s.height * 0.72,
-        s.width * 0.85, s.height * 0.52,
+        face.left + face.width * 0.30,
+        face.top + face.height * 0.86,
+        face.left + face.width * 0.48,
+        face.top + face.height * 0.90,
       );
-      path.lineTo(s.width * 0.65, s.height * 0.58);
-      path.lineTo(s.width * 0.35, s.height * 0.58);
+      path.lineTo(face.left + face.width * 0.52, face.top + face.height * 0.90);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.70,
+        face.top + face.height * 0.86,
+        face.left + face.width * 0.92,
+        face.top + face.height * 0.57,
+      );
+      path.lineTo(face.left + face.width * 0.76, face.top + face.height * 0.64);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.61,
+        face.top + face.height * 0.77,
+        face.left + face.width * 0.50,
+        face.top + face.height * 0.84,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.39,
+        face.top + face.height * 0.77,
+        face.left + face.width * 0.24,
+        face.top + face.height * 0.64,
+      );
       path.close();
       return path;
     },
@@ -133,41 +231,15 @@ class FaceMapPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Face outline
-    final facePaint = Paint()
-      ..color = Colors.grey.shade200
-      ..style = PaintingStyle.fill;
-    final facePath = Path();
-    facePath.moveTo(size.width * 0.5, size.height * 0.05);
-    facePath.quadraticBezierTo(
-      size.width * 0.92, size.height * 0.25,
-      size.width * 0.88, size.height * 0.55,
-    );
-    facePath.quadraticBezierTo(
-      size.width * 0.5, size.height * 0.88,
-      size.width * 0.12, size.height * 0.55,
-    );
-    facePath.quadraticBezierTo(
-      size.width * 0.08, size.height * 0.25,
-      size.width * 0.5, size.height * 0.05,
-    );
-    facePath.close();
-    canvas.drawPath(facePath, facePaint);
+    if (size.isEmpty) return;
 
-    final outlinePaint = Paint()
-      ..color = Colors.grey.shade400
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawPath(facePath, outlinePaint);
-
-    // Regions
     for (final entry in _regionPaths.entries) {
       final region = entry.key;
       final path = entry.value(size);
       final count = regionCounts[region.id] ?? 0;
 
       final fillPaint = Paint()
-        ..color = faceRegionColors[region]!.withValues(alpha: 0.55)
+        ..color = faceRegionColors[region]!.withValues(alpha: 0.45)
         ..style = PaintingStyle.fill;
       canvas.drawPath(path, fillPaint);
 

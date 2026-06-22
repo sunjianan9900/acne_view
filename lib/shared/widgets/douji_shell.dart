@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/window/window_service.dart';
+import 'window_controls.dart';
 
 class DoujiShell extends StatelessWidget {
   const DoujiShell({
@@ -11,6 +13,7 @@ class DoujiShell extends StatelessWidget {
     required this.child,
     this.rightPanel,
     this.actions = const <Widget>[],
+    this.showHeader = true,
   });
 
   final String title;
@@ -18,10 +21,12 @@ class DoujiShell extends StatelessWidget {
   final Widget child;
   final Widget? rightPanel;
   final List<Widget> actions;
+  final bool showHeader;
 
   static const _navItems = <_NavItem>[
     _NavItem(label: '概览', icon: Icons.home_outlined, route: '/'),
     _NavItem(label: '痘痘地图', icon: Icons.face_outlined, route: '/face-map'),
+    _NavItem(label: '痘痘科普', icon: Icons.menu_book_outlined, route: '/acne-education'),
   ];
 
   @override
@@ -37,67 +42,81 @@ class DoujiShell extends StatelessWidget {
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              const _Sidebar(),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppTheme.panelBorder),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
+      backgroundColor: AppTheme.softBackground,
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _Sidebar(),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: AppTheme.panelBorder),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (showHeader) ...[
                         Row(
                           children: [
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineSmall
-                                        ?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    subtitle,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: AppTheme.textSecondary,
-                                        ),
-                                  ),
-                                ],
+                              child: WindowDragRegion(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    if (subtitle.isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        subtitle,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              color: AppTheme.textSecondary,
+                                            ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ),
                             ...actions,
                           ],
                         ),
                         const SizedBox(height: 20),
-                        Expanded(child: child),
+                      ] else ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: actions,
+                        ),
+                        if (actions.isNotEmpty) const SizedBox(height: 12),
                       ],
-                    ),
+                      Expanded(child: child),
+                    ],
                   ),
                 ),
               ),
-              if (rightPanel != null) ...[
-                const SizedBox(width: 20),
-                SizedBox(width: 300, child: rightPanel!),
-              ],
+            ),
+            if (rightPanel != null) ...[
+              const SizedBox(width: 16),
+              SizedBox(width: 300, child: rightPanel!),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -118,41 +137,47 @@ class _Sidebar extends StatelessWidget {
         border: Border.all(color: AppTheme.panelBorder),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
+        padding: const EdgeInsets.fromLTRB(14, 20, 14, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const WindowControls(),
+            const SizedBox(height: 16),
             Row(
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: AppTheme.softRose,
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  child: const Icon(
-                    Icons.spa_outlined,
-                    color: AppTheme.brandPink,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '痘迹',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+                WindowDragRegion(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppTheme.softRose,
+                          borderRadius: BorderRadius.circular(19),
+                        ),
+                        child: const Icon(
+                          Icons.spa_outlined,
+                          color: AppTheme.brandPink,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '记录一处变化',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary,
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '痘迹',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            '记录一处变化',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppTheme.textSecondary),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

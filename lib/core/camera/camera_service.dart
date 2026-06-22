@@ -14,6 +14,7 @@ abstract class CameraService {
   bool get isInitialized;
   bool get hasExternalCamera;
   CameraDeviceInfo? get currentDevice;
+  double? get previewAspectRatio;
 }
 
 class CameraDeviceInfo {
@@ -40,8 +41,7 @@ class PhotoStorage {
     if (!spotDir.existsSync()) {
       await spotDir.create(recursive: true);
     }
-    final fileName =
-        '${capturedAt.millisecondsSinceEpoch}.jpg';
+    final fileName = '${capturedAt.millisecondsSinceEpoch}.jpg';
     final destPath = p.join(spotDir.path, fileName);
     await File(sourcePath).copy(destPath);
     return destPath;
