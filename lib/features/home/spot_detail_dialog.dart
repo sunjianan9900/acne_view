@@ -13,7 +13,6 @@ import '../../shared/models/spot_display.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/models/treatment_type.dart';
 import '../../shared/photo/photo_viewer.dart';
-import '../face_map/add_spot_dialog.dart';
 
 Future<void> showSpotDetailDialog(
   BuildContext context,
@@ -355,13 +354,10 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
                                 direction: 1,
                               )
                             : null,
-                        onOpenImage: () async {
-                          final photo = await ref.read(
-                            spotThumbnailProvider(spot.id).future,
-                          );
-                          if (photo?.filePath != null && mounted) {
-                            await showPhotoViewer(context, photo!.filePath);
-                          }
+                        onOpenImage: () {
+                          final filePath = photoAsync.valueOrNull?.filePath;
+                          if (filePath == null) return;
+                          showPhotoViewer(context, filePath);
                         },
                         direction: _pageDirection,
                       ),
@@ -631,7 +627,7 @@ class _SpotStrip extends StatelessWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: spots.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 14),
+                separatorBuilder: (context, _) => const SizedBox(width: 14),
                 itemBuilder: (context, index) {
                   final spot = spots[index];
                   return _SpotStripTile(
@@ -702,7 +698,7 @@ class _SpotStripTile extends ConsumerWidget {
                 child: thumbnailAsync.when(
                   data: (photo) => _SpotPreviewPhoto(photoPath: photo?.filePath),
                   loading: () => const _SpotPreviewPhoto(),
-                  error: (_, _) => const _SpotPreviewPhoto(),
+                  error: (error, stackTrace) => const _SpotPreviewPhoto(),
                 ),
               ),
             ),
