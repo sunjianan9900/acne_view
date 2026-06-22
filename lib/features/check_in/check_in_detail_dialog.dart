@@ -48,7 +48,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
   late bool _editing;
   bool _saving = false;
   bool _deleting = false;
-  String _selectedPhaseId = AcnePhase.swollen.id;
+  String _selectedPhaseId = AcnePhase.mildComedone.id;
   DateTime _selectedCheckInDate = DateTime.now();
   final _noteController = TextEditingController();
   final List<_TreatmentRow> _treatments = [];
@@ -84,7 +84,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
     if (_formReady) return;
     _selectedPhaseId = detail.checkIn.phase.isNotEmpty
         ? detail.checkIn.phase
-        : AcnePhase.swollen.id;
+        : AcnePhase.mildComedone.id;
     _selectedCheckInDate = detail.checkIn.checkInDate;
     _noteController.text = detail.checkIn.note;
     for (final row in _treatments) {

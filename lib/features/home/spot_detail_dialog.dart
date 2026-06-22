@@ -885,8 +885,8 @@ class _DetailStack extends ConsumerWidget {
 
   PhaseInfo _fallbackPhaseInfo(SpotStatus status, List<PhaseInfo> allPhases) {
     final fallbackId = status == SpotStatus.active
-        ? AcnePhase.swollen.id
-        : AcnePhase.receding.id;
+        ? AcnePhase.inflammatory.id
+        : AcnePhase.repairing.id;
     return findPhaseInfo(fallbackId, allPhases) ?? allPhases.first;
   }
 
@@ -896,10 +896,22 @@ class _DetailStack extends ConsumerWidget {
       return '当前处于「${phase.label}」阶段，建议持续记录皮肤变化并坚持温和护理。';
     }
     return switch (builtin) {
-      AcnePhase.swollen => '红肿明显，可能伴有疼痛或触痛，建议避免挤压，注意消炎护理。',
-      AcnePhase.inflammatory => '炎症仍在恢复中，建议继续观察皮肤状态，减少刺激和摩擦。',
-      AcnePhase.stable => '状态相对稳定，重点是维持清洁和规律护理，避免反复刺激。',
-      AcnePhase.receding => '正在逐步消退，保持温和护理并持续记录变化，有助于观察恢复趋势。',
+      AcnePhase.mildComedone =>
+        '皮肤表面出现轻微粉刺，尚未明显红肿，重点是保持清洁，避免过度护肤刺激。',
+      AcnePhase.closedComedone =>
+        '闭口粉刺已形成，毛孔堵塞但未发炎，建议温和去角质，不要用手挤压。',
+      AcnePhase.inflammatory =>
+        '痘痘进入炎症阶段，局部可能出现发红发热，需减少摩擦并注意观察变化。',
+      AcnePhase.swollen =>
+        '红肿明显，可能伴有疼痛或触痛，建议避免挤压，注意消炎护理。',
+      AcnePhase.pustule =>
+        '脓包已形成，炎症较为明显，切勿自行挑破，保持创面清洁防止感染。',
+      AcnePhase.broken =>
+        '痘痘已破损，皮肤屏障受损，重点是防感染与温和修护，避免化妆遮盖刺激。',
+      AcnePhase.receding =>
+        '正在逐步消退，红肿减轻，保持温和护理并持续记录变化，有助于观察恢复趋势。',
+      AcnePhase.repairing =>
+        '处于修复阶段，重点是舒缓修护与防晒保湿，帮助皮肤恢复健康状态。',
     };
   }
 
@@ -909,10 +921,22 @@ class _DetailStack extends ConsumerWidget {
       return '保持皮肤清洁与规律作息，持续记录有助于观察恢复趋势。';
     }
     return switch (builtin) {
-      AcnePhase.swollen => '保持皮肤清洁，避免辛辣刺激食物和熬夜，多喝水有助于皮肤恢复。',
-      AcnePhase.inflammatory => '继续观察红肿范围，减少外部摩擦，保持作息稳定更有利于恢复。',
-      AcnePhase.stable => '维持当前护理节奏，按需补充保湿与防晒，防止状态再次波动。',
-      AcnePhase.receding => '恢复期也要坚持记录，后续对比会更清楚地看到变化轨迹。',
+      AcnePhase.mildComedone =>
+        '使用温和洁面产品，控制油脂分泌，少吃高糖高脂食物有助于预防加重。',
+      AcnePhase.closedComedone =>
+        '可适当使用含水杨酸或果酸的护肤品，循序渐进，避免一次性高强度处理。',
+      AcnePhase.inflammatory =>
+        '继续观察红肿范围，减少外部摩擦，保持作息稳定更有利于恢复。',
+      AcnePhase.swollen =>
+        '保持皮肤清洁，避免辛辣刺激食物和熬夜，多喝水有助于皮肤恢复。',
+      AcnePhase.pustule =>
+        '不要自行挤脓，可使用干净医用棉签轻柔处理，并遵医嘱使用外用药物。',
+      AcnePhase.broken =>
+        '破损处保持干燥清洁，暂停刺激性护肤品，可考虑使用修复类乳液加速愈合。',
+      AcnePhase.receding =>
+        '消退期也要坚持记录，后续对比会更清楚地看到变化轨迹。',
+      AcnePhase.repairing =>
+        '加强防晒与保湿，避免在修复期使用强效焕肤产品，给皮肤足够恢复时间。',
     };
   }
 }

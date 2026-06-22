@@ -190,7 +190,7 @@ class _PhaseTagRow extends ConsumerWidget {
           autofocus: true,
           decoration: const InputDecoration(
             labelText: '显示名称',
-            hintText: '例如：红肿期、爆发期',
+            hintText: '例如：结痂期、爆发期',
           ),
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => Navigator.of(ctx).pop(true),

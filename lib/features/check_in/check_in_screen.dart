@@ -36,7 +36,7 @@ class CheckInScreen extends ConsumerStatefulWidget {
 class _CheckInScreenState extends ConsumerState<CheckInScreen> {
   final _noteController = TextEditingController();
   final List<_TreatmentRow> _treatments = [_TreatmentRow()];
-  String _selectedPhaseId = AcnePhase.swollen.id;
+  String _selectedPhaseId = AcnePhase.mildComedone.id;
   bool _saving = false;
 
   @override
