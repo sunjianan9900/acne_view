@@ -14,13 +14,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         await migrator.addColumn(checkInRecords, checkInRecords.phase);
+      }
+      if (from < 3) {
+        await migrator.addColumn(acneSpots, acneSpots.title);
       }
     },
   );
@@ -57,6 +60,12 @@ class AppDatabase extends _$AppDatabase {
 
   Future<bool> updateSpot(AcneSpotsCompanion spot) {
     return update(acneSpots).replace(spot);
+  }
+
+  Future<int> updateSpotNote(String id, String note) {
+    return (update(acneSpots)..where((t) => t.id.equals(id))).write(
+      AcneSpotsCompanion(note: Value(note)),
+    );
   }
 
   Future<int> updateSpotStatus(String id, String status) {
@@ -177,9 +186,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<int> deleteTreatmentsForCheckIn(String checkInId) {
-    return (delete(treatmentItems)
-          ..where((t) => t.checkInId.equals(checkInId)))
-        .go();
+    return (delete(
+      treatmentItems,
+    )..where((t) => t.checkInId.equals(checkInId))).go();
   }
 
   // --- Photos ---
