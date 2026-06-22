@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/database/database.dart';
 import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
-import '../../shared/models/face_region.dart';
 import '../../shared/models/spot_display.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/widgets/douji_shell.dart';
+import '../home/spot_detail_dialog.dart';
 import 'add_spot_dialog.dart';
-import 'region_spots_screen.dart';
-import 'widgets/face_map_painter.dart';
+import 'widgets/aggregated_face_map_widget.dart';
 
 class FaceMapScreen extends ConsumerStatefulWidget {
   const FaceMapScreen({super.key});
@@ -22,17 +20,17 @@ class FaceMapScreen extends ConsumerStatefulWidget {
 }
 
 class _FaceMapScreenState extends ConsumerState<FaceMapScreen> {
-  FaceRegion? _selectedRegion;
+  String? _highlightedSpotId;
 
   @override
   Widget build(BuildContext context) {
-    final regionCounts = ref.watch(regionCountsProvider);
+    final placedMarkers = ref.watch(allPlacedSpotMarkersProvider);
     final allSpots = ref.watch(allSpotsProvider);
     final isDesktop = MediaQuery.of(context).size.width >= 1080;
 
     return DoujiShell(
       title: '面部地图',
-      subtitle: '点击面部区域查看痘痘，或新增记录',
+      subtitle: '点击面部标记查看痘痘详情',
       actions: [
         FilledButton.icon(
           onPressed: () => _addSpot(context, ref),
@@ -41,115 +39,75 @@ class _FaceMapScreenState extends ConsumerState<FaceMapScreen> {
         ),
       ],
       rightPanel: isDesktop
-          ? _selectedRegion == null
-              ? allSpots.when(
-                  data: (spots) => _SpotListPanel(spots: spots),
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('加载失败: $e')),
-                )
-              : RegionSpotsContent(
-                  region: _selectedRegion!,
-                  onClearSelection: () => setState(() => _selectedRegion = null),
-                  showHeader: true,
-                )
-          : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppTheme.panelBorder),
+          ? allSpots.when(
+              data: (spots) => _SpotListPanel(
+                spots: spots,
+                highlightedSpotId: _highlightedSpotId,
+                onSpotTap: (spotId) => _openSpotDetail(context, ref, spotId),
               ),
-              padding: const EdgeInsets.all(18),
-              child: regionCounts.when(
-                data: (counts) => FaceMapWidget(
-                  regionCounts: counts,
-                  onRegionTap: (region) {
-                    if (isDesktop) {
-                      setState(() => _selectedRegion = region);
-                      return;
-                    }
-                    context.push('/region/${region.id}');
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('加载失败: $e')),
+            )
+          : null,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppTheme.panelBorder),
+        ),
+        padding: const EdgeInsets.all(18),
+        child: placedMarkers.when(
+          data: (markers) => markers.isEmpty
+              ? Center(
+                  child: Text(
+                    '还没有面部标记\n在概览页为痘痘项目添加拍照位置后会显示在这里',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                )
+              : AggregatedFaceMapWidget(
+                  placedMarkers: markers,
+                  highlightedSpotId: _highlightedSpotId,
+                  onMarkerTap: (spotId) {
+                    setState(() => _highlightedSpotId = spotId);
+                    _openSpotDetail(context, ref, spotId);
                   },
                 ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('加载失败: $e')),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          const _RegionLegend(),
-        ],
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('加载失败: $e')),
+        ),
       ),
     );
+  }
+
+  void _openSpotDetail(BuildContext context, WidgetRef ref, String spotId) {
+    showSpotDetailDialog(context, ref, initialSpotId: spotId);
   }
 
   Future<void> _addSpot(BuildContext context, WidgetRef ref) async {
     final spotId = await showAddSpotDialog(context, ref);
     if (spotId == null || !context.mounted) return;
 
-    final spot = await ref.read(spotRepositoryProvider).getSpot(spotId);
-    if (!context.mounted || spot == null) return;
-
-    final region = FaceRegion.fromId(spot.faceRegion);
-    if (MediaQuery.of(context).size.width >= 1080 && region != null) {
-      setState(() => _selectedRegion = region);
-    } else {
-      context.push('/region/${spot.faceRegion}');
-    }
+    setState(() => _highlightedSpotId = spotId);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('痘痘已创建')));
-  }
-}
-
-class _RegionLegend extends StatelessWidget {
-  const _RegionLegend();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.panelBorder),
-      ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 8,
-        alignment: WrapAlignment.center,
-        children: FaceRegion.values
-            .map(
-              (r) => Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: faceRegionColors[r]!.withValues(alpha: 0.7),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(r.label, style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
-            )
-            .toList(),
-      ),
-    );
+    ).showSnackBar(const SnackBar(content: Text('痘痘已创建，可在概览页标记拍照位置')));
   }
 }
 
 class _SpotListPanel extends StatelessWidget {
-  const _SpotListPanel({required this.spots});
+  const _SpotListPanel({
+    required this.spots,
+    required this.onSpotTap,
+    this.highlightedSpotId,
+  });
 
   final List<AcneSpot> spots;
+  final void Function(String spotId) onSpotTap;
+  final String? highlightedSpotId;
 
   @override
   Widget build(BuildContext context) {
@@ -188,14 +146,24 @@ class _SpotListPanel extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final spot = spots[index];
                         final status = SpotStatus.fromId(spot.status);
+                        final selected = spot.id == highlightedSpotId;
                         return InkWell(
                           borderRadius: BorderRadius.circular(12),
-                          onTap: () => context.push('/timeline/${spot.id}'),
+                          onTap: () => onSpotTap(spot.id),
                           child: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppTheme.softRose.withValues(alpha: 0.6),
+                              color: selected
+                                  ? AppTheme.softRose
+                                  : AppTheme.softRose.withValues(alpha: 0.6),
                               borderRadius: BorderRadius.circular(12),
+                              border: selected
+                                  ? Border.all(
+                                      color: AppTheme.brandPink.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             child: Row(
                               children: [

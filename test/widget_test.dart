@@ -7,7 +7,10 @@ import 'package:acne_view/core/camera/builtin_camera_service.dart';
 import 'package:acne_view/core/database/database.dart';
 import 'package:acne_view/core/providers/camera_provider.dart';
 import 'package:acne_view/core/providers/repositories.dart';
+import 'package:acne_view/features/face_map/widgets/aggregated_face_map_widget.dart';
 import 'package:acne_view/features/face_map/widgets/face_map_painter.dart';
+import 'package:acne_view/features/home/spot_detail_dialog.dart';
+import 'package:acne_view/shared/models/placed_spot_marker.dart';
 import 'package:acne_view/shared/models/face_region.dart';
 import 'package:acne_view/shared/models/spot_status.dart';
 
@@ -58,6 +61,10 @@ class _SpySpotRepository implements AcneSpotRepository {
 
   @override
   Future<void> deleteFaceMarker(String id) async {}
+
+  @override
+  Stream<List<PlacedSpotMarker>> watchAllPlacedMarkers() =>
+      Stream<List<PlacedSpotMarker>>.value(const []);
 
   @override
   Future<void> updateSpotMapPosition(String id, double? x, double? y) async {}
@@ -136,7 +143,7 @@ void main() {
     expect(find.byType(SlideTransition), findsNothing);
   });
 
-  testWidgets('desktop face region tap updates the right panel only', (
+  testWidgets('desktop face map marker tap opens spot detail', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 1024);
@@ -159,6 +166,13 @@ void main() {
         faceMapY: null,
       ),
     ];
+    final marker = SpotFaceMarker(
+      id: 'marker-1',
+      spotId: 'spot-1',
+      mapX: 0.5,
+      mapY: 0.25,
+    );
+    final placed = [PlacedSpotMarker(marker: marker, spot: spots.first)];
 
     await tester.pumpWidget(
       ProviderScope(
@@ -167,12 +181,9 @@ void main() {
           allSpotsProvider.overrideWith(
             (ref) => Stream<List<AcneSpot>>.value(spots),
           ),
-          spotsByRegionProvider(
-            FaceRegion.forehead.id,
-          ).overrideWith((ref) => Stream<List<AcneSpot>>.value(spots)),
-          regionCountsProvider.overrideWith((ref) async {
-            return {for (final region in FaceRegion.values) region.id: 0};
-          }),
+          allPlacedSpotMarkersProvider.overrideWith(
+            (ref) => Stream<List<PlacedSpotMarker>>.value(placed),
+          ),
         ],
         child: const DoujiApp(),
       ),
@@ -182,35 +193,24 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     await tester.tap(find.text('痘痘地图'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('已记录的痘痘 (1)'), findsOneWidget);
+    expect(find.byType(AggregatedFaceMapWidget), findsOneWidget);
 
-    final faceMap = find.descendant(
-      of: find.byType(FaceMapWidget),
-      matching: find.byType(GestureDetector),
+    final mapBox = tester.getRect(find.byType(AggregatedFaceMapWidget));
+    final markerLocal = FaceMapCoordinates.localFromNormalized(
+      0.5,
+      0.25,
+      mapBox.size,
     );
-    expect(faceMap, findsOneWidget);
-    final box = tester.getRect(faceMap);
-    Offset? hitPoint;
-    for (var x = 0.2; x <= 0.8 && hitPoint == null; x += 0.05) {
-      for (var y = 0.08; y <= 0.32; y += 0.02) {
-        final local = Offset(box.width * x, box.height * y);
-        if (FaceMapPainter.hitTestRegion(local, box.size) ==
-            FaceRegion.forehead) {
-          hitPoint = box.topLeft + local;
-          break;
-        }
-      }
-    }
-    expect(hitPoint, isNotNull);
-    await tester.tapAt(hitPoint!);
-    await tester.pumpAndSettle();
+    await tester.tapAt(mapBox.topLeft + markerLocal);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('额头 · 痘痘列表'), findsOneWidget);
-    expect(find.text('查看全部'), findsOneWidget);
-    expect(find.text('痘痘地图'), findsWidgets);
-    expect(find.byType(Scaffold), findsOneWidget);
+    expect(find.byType(SpotDetailDialog), findsOneWidget);
+    expect(find.text('额头新痘'), findsWidgets);
   });
 
   testWidgets('desktop home splits timeline and note editor', (tester) async {

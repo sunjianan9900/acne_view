@@ -155,6 +155,18 @@ class AppDatabase extends _$AppDatabase {
     return (delete(spotFaceMarkers)..where((t) => t.id.equals(id))).go();
   }
 
+  Stream<List<(SpotFaceMarker, AcneSpot)>> watchAllPlacedMarkerRows() {
+    final query = select(spotFaceMarkers).join([
+      innerJoin(acneSpots, acneSpots.id.equalsExp(spotFaceMarkers.spotId)),
+    ]);
+    return query.watch().map(
+      (rows) => [
+        for (final row in rows)
+          (row.readTable(spotFaceMarkers), row.readTable(acneSpots)),
+      ],
+    );
+  }
+
   // --- Check-ins ---
 
   Stream<List<CheckInRecord>> watchCheckInsForSpot(String spotId) {

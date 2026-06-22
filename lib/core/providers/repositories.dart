@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../database/database.dart';
 import '../../shared/models/face_region.dart';
+import '../../shared/models/placed_spot_marker.dart';
 import '../../shared/models/photo_source.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/models/treatment_type.dart';
@@ -57,6 +58,15 @@ class AcneSpotRepository {
       _db.updateFaceMarkerPosition(id, x, y);
 
   Future<void> deleteFaceMarker(String id) => _db.deleteFaceMarker(id);
+
+  Stream<List<PlacedSpotMarker>> watchAllPlacedMarkers() {
+    return _db.watchAllPlacedMarkerRows().map(
+      (rows) => [
+        for (final (marker, spot) in rows)
+          PlacedSpotMarker(marker: marker, spot: spot),
+      ],
+    );
+  }
 
   Future<String> createSpot({
     required FaceRegion region,
@@ -329,6 +339,11 @@ final selectedHomeSpotIdProvider = StateProvider<String?>((ref) => null);
 final spotFaceMarkersProvider =
     StreamProvider.family<List<SpotFaceMarker>, String>((ref, spotId) {
       return ref.watch(spotRepositoryProvider).watchFaceMarkers(spotId);
+    });
+
+final allPlacedSpotMarkersProvider =
+    StreamProvider<List<PlacedSpotMarker>>((ref) {
+      return ref.watch(spotRepositoryProvider).watchAllPlacedMarkers();
     });
 
 final spotTimelineProvider =
