@@ -48,15 +48,13 @@ class FaceMapCoordinates {
     );
   }
 
-  static bool hasMapPosition(AcneSpot spot) =>
-      spot.faceMapX != null && spot.faceMapY != null;
-
-  static Offset? markerPosition(AcneSpot spot, Size size) {
-    final x = spot.faceMapX;
-    final y = spot.faceMapY;
+  static Offset? markerPosition(double? x, double? y, Size size) {
     if (x == null || y == null) return null;
     return localFromNormalized(x, y, size);
   }
+
+  static Offset? markerRecordPosition(SpotFaceMarker marker, Size size) =>
+      localFromNormalized(marker.mapX, marker.mapY, size);
 }
 
 class FaceMapWidget extends StatelessWidget {

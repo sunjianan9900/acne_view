@@ -4,24 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/database.dart';
 import '../../../core/providers/repositories.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/models/face_region.dart';
-import '../../../shared/models/spot_display.dart';
-import '../../../shared/models/spot_status.dart';
 import 'face_map_painter.dart';
 
-/// 概览页右侧面板中的面部位置预览，点击打开大图编辑器。
+/// 当前痘痘项目独立的面部位置预览，点击打开大图编辑器。
 class SpotFaceMapPreview extends ConsumerWidget {
-  const SpotFaceMapPreview({
-    super.key,
-    required this.spots,
-    required this.selectedSpotId,
-  });
+  const SpotFaceMapPreview({super.key, required this.spotId});
 
-  final List<AcneSpot> spots;
-  final String selectedSpotId;
+  final String spotId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final markersAsync = ref.watch(spotFaceMarkersProvider(spotId));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -45,12 +39,7 @@ class SpotFaceMapPreview extends ConsumerWidget {
         const SizedBox(height: 8),
         InkWell(
           borderRadius: BorderRadius.circular(14),
-          onTap: () => showSpotFaceMapEditor(
-            context,
-            ref,
-            spots: spots,
-            selectedSpotId: selectedSpotId,
-          ),
+          onTap: () => showSpotFaceMapEditor(context, ref, spotId: spotId),
           child: Container(
             height: 150,
             decoration: BoxDecoration(
@@ -59,10 +48,19 @@ class SpotFaceMapPreview extends ConsumerWidget {
               border: Border.all(color: AppTheme.panelBorder),
             ),
             padding: const EdgeInsets.all(10),
-            child: SpotFaceMapCanvas(
-              spots: spots,
-              selectedSpotId: selectedSpotId,
-              interactive: false,
+            child: markersAsync.when(
+              data: (markers) => SpotFaceMapCanvas(
+                markers: markers,
+                interactive: false,
+              ),
+              loading: () => const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+              error: (_, _) => const SizedBox.shrink(),
             ),
           ),
         ),
@@ -74,27 +72,18 @@ class SpotFaceMapPreview extends ConsumerWidget {
 Future<void> showSpotFaceMapEditor(
   BuildContext context,
   WidgetRef ref, {
-  required List<AcneSpot> spots,
-  required String selectedSpotId,
+  required String spotId,
 }) {
   return showDialog<void>(
     context: context,
-    builder: (ctx) => SpotFaceMapEditorDialog(
-      spots: spots,
-      initialSelectedSpotId: selectedSpotId,
-    ),
+    builder: (ctx) => SpotFaceMapEditorDialog(spotId: spotId),
   );
 }
 
 class SpotFaceMapEditorDialog extends ConsumerStatefulWidget {
-  const SpotFaceMapEditorDialog({
-    super.key,
-    required this.spots,
-    required this.initialSelectedSpotId,
-  });
+  const SpotFaceMapEditorDialog({super.key, required this.spotId});
 
-  final List<AcneSpot> spots;
-  final String initialSelectedSpotId;
+  final String spotId;
 
   @override
   ConsumerState<SpotFaceMapEditorDialog> createState() =>
@@ -103,93 +92,78 @@ class SpotFaceMapEditorDialog extends ConsumerStatefulWidget {
 
 class _SpotFaceMapEditorDialogState
     extends ConsumerState<SpotFaceMapEditorDialog> {
-  late String _selectedSpotId;
   bool _addMode = false;
-  String? _draggingSpotId;
+  String? _selectedMarkerId;
+  String? _draggingMarkerId;
 
-  @override
-  void initState() {
-    super.initState();
-    _selectedSpotId = widget.initialSelectedSpotId;
-  }
-
-  List<AcneSpot> get _spots =>
-      ref.watch(allSpotsProvider).maybeWhen(
-        data: (spots) => spots,
-        orElse: () => widget.spots,
-      );
-
-  AcneSpot? _spotById(String id) {
-    for (final spot in _spots) {
-      if (spot.id == id) return spot;
-    }
-    return null;
-  }
-
-  Future<void> _persistPosition(String spotId, double x, double y) async {
-    await ref.read(spotRepositoryProvider).updateSpotMapPosition(spotId, x, y);
-  }
-
-  Future<void> _clearPosition(String spotId) async {
-    await ref.read(spotRepositoryProvider).updateSpotMapPosition(spotId, null, null);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已移除面部标记')),
-    );
-  }
-
-  Future<void> _createSpotAt(Offset local, Size size) async {
-    final normalized = FaceMapCoordinates.normalizedFromLocal(local, size);
-    if (normalized == null) return;
-
-    final region =
-        FaceMapPainter.hitTestRegion(local, size) ?? FaceRegion.forehead;
-    final spotId = await ref.read(spotRepositoryProvider).createSpot(
-      region: region,
-      faceMapX: normalized.dx,
-      faceMapY: normalized.dy,
-    );
+  Future<void> _addMarker(double x, double y) async {
+    final id = await ref
+        .read(spotRepositoryProvider)
+        .addFaceMarker(widget.spotId, x, y);
     if (!mounted) return;
     setState(() {
-      _selectedSpotId = spotId;
+      _selectedMarkerId = id;
       _addMode = false;
     });
-    ref.read(selectedHomeSpotIdProvider.notifier).state = spotId;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已添加痘痘标记')),
+  }
+
+  Future<void> _moveMarker(String markerId, double x, double y) async {
+    await ref.read(spotRepositoryProvider).updateFaceMarkerPosition(
+      markerId,
+      x,
+      y,
     );
   }
 
-  Future<void> _handleTap(Offset local, Size size) async {
+  Future<void> _removeSelectedMarker() async {
+    final id = _selectedMarkerId;
+    if (id == null) return;
+    await ref.read(spotRepositoryProvider).deleteFaceMarker(id);
+    if (!mounted) return;
+    setState(() => _selectedMarkerId = null);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已移除标记')),
+    );
+  }
+
+  SpotFaceMarker? _hitTestMarker(
+    List<SpotFaceMarker> markers,
+    Offset local,
+    Size size,
+  ) {
+    for (final marker in markers) {
+      final position = FaceMapCoordinates.markerRecordPosition(marker, size);
+      if (position == null) continue;
+      if ((position - local).distance <= 16) return marker;
+    }
+    return null;
+  }
+
+  Future<void> _handleTap(
+    List<SpotFaceMarker> markers,
+    Offset local,
+    Size size,
+  ) async {
     final normalized = FaceMapCoordinates.normalizedFromLocal(local, size);
     if (normalized == null) return;
 
+    final hit = _hitTestMarker(markers, local, size);
+    if (hit != null) {
+      setState(() => _selectedMarkerId = hit.id);
+      return;
+    }
+
     if (_addMode) {
-      await _createSpotAt(local, size);
+      await _addMarker(normalized.dx, normalized.dy);
       return;
     }
 
-    final hitSpot = _hitTestMarker(local, size);
-    if (hitSpot != null) {
-      setState(() => _selectedSpotId = hitSpot.id);
-      return;
-    }
-
-    await _persistPosition(_selectedSpotId, normalized.dx, normalized.dy);
-  }
-
-  AcneSpot? _hitTestMarker(Offset local, Size size) {
-    for (final spot in _spots) {
-      final position = FaceMapCoordinates.markerPosition(spot, size);
-      if (position == null) continue;
-      if ((position - local).distance <= 16) return spot;
-    }
-    return null;
+    await _addMarker(normalized.dx, normalized.dy);
   }
 
   @override
   Widget build(BuildContext context) {
-    final selected = _spotById(_selectedSpotId);
+    final markersAsync = ref.watch(spotFaceMarkersProvider(widget.spotId));
 
     return Dialog(
       backgroundColor: Colors.white,
@@ -220,53 +194,49 @@ class _SpotFaceMapEditorDialogState
               ),
               Text(
                 _addMode
-                    ? '点击面部任意位置添加新痘痘'
-                    : '拖动标记调整位置，点击空白处放置当前痘痘',
+                    ? '点击面部添加标记'
+                    : '拖动标记调整位置，点击空白处也可添加',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppTheme.textSecondary,
                 ),
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SpotFaceMapCanvas(
-                      spots: _spots,
-                      selectedSpotId: _selectedSpotId,
-                      interactive: true,
-                      draggingSpotId: _draggingSpotId,
-                      onTapAt: (local, size) => _handleTap(local, size),
-                      onMarkerDragStart: (spotId) {
-                        setState(() {
-                          _draggingSpotId = spotId;
-                          _selectedSpotId = spotId;
-                          _addMode = false;
-                        });
-                      },
-                      onMarkerDragUpdate: (spotId, local, size) {
-                        final normalized =
-                            FaceMapCoordinates.normalizedFromLocal(local, size);
-                        if (normalized == null) return;
-                        _persistPosition(
-                          spotId,
-                          normalized.dx,
-                          normalized.dy,
-                        );
-                      },
-                      onMarkerDragEnd: (_) {
-                        setState(() => _draggingSpotId = null);
-                      },
-                    );
-                  },
+                child: markersAsync.when(
+                  data: (markers) => SpotFaceMapCanvas(
+                    markers: markers,
+                    selectedMarkerId: _selectedMarkerId,
+                    draggingMarkerId: _draggingMarkerId,
+                    interactive: true,
+                    onTapAt: (local, size) =>
+                        _handleTap(markers, local, size),
+                    onMarkerDragStart: (markerId) {
+                      setState(() {
+                        _draggingMarkerId = markerId;
+                        _selectedMarkerId = markerId;
+                        _addMode = false;
+                      });
+                    },
+                    onMarkerDragUpdate: (markerId, local, size) {
+                      final normalized =
+                          FaceMapCoordinates.normalizedFromLocal(local, size);
+                      if (normalized == null) return;
+                      _moveMarker(markerId, normalized.dx, normalized.dy);
+                    },
+                    onMarkerDragEnd: (_) {
+                      setState(() => _draggingMarkerId = null);
+                    },
+                  ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('加载失败: $e')),
                 ),
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  if (selected != null &&
-                      FaceMapCoordinates.hasMapPosition(selected))
+                  if (_selectedMarkerId != null)
                     OutlinedButton.icon(
-                      onPressed: () => _clearPosition(selected.id),
+                      onPressed: _removeSelectedMarker,
                       icon: const Icon(Icons.remove_circle_outline, size: 18),
                       label: const Text('移除标记'),
                     ),
@@ -274,7 +244,7 @@ class _SpotFaceMapEditorDialogState
                   FilledButton.tonalIcon(
                     onPressed: () => setState(() => _addMode = !_addMode),
                     icon: Icon(_addMode ? Icons.close : Icons.add),
-                    label: Text(_addMode ? '取消添加' : '添加痘痘'),
+                    label: Text(_addMode ? '取消添加' : '添加标记'),
                   ),
                 ],
               ),
@@ -289,25 +259,25 @@ class _SpotFaceMapEditorDialogState
 class SpotFaceMapCanvas extends StatefulWidget {
   const SpotFaceMapCanvas({
     super.key,
-    required this.spots,
-    required this.selectedSpotId,
+    required this.markers,
     required this.interactive,
-    this.draggingSpotId,
+    this.selectedMarkerId,
+    this.draggingMarkerId,
     this.onTapAt,
     this.onMarkerDragStart,
     this.onMarkerDragUpdate,
     this.onMarkerDragEnd,
   });
 
-  final List<AcneSpot> spots;
-  final String selectedSpotId;
+  final List<SpotFaceMarker> markers;
   final bool interactive;
-  final String? draggingSpotId;
+  final String? selectedMarkerId;
+  final String? draggingMarkerId;
   final void Function(Offset local, Size size)? onTapAt;
-  final void Function(String spotId)? onMarkerDragStart;
-  final void Function(String spotId, Offset local, Size size)?
+  final void Function(String markerId)? onMarkerDragStart;
+  final void Function(String markerId, Offset local, Size size)?
   onMarkerDragUpdate;
-  final void Function(String spotId)? onMarkerDragEnd;
+  final void Function(String markerId)? onMarkerDragEnd;
 
   @override
   State<SpotFaceMapCanvas> createState() => _SpotFaceMapCanvasState();
@@ -346,22 +316,24 @@ class _SpotFaceMapCanvasState extends State<SpotFaceMapCanvas> {
                       widget.onTapAt?.call(details.localPosition, size),
                 ),
               ),
-            for (final spot in widget.spots)
-              if (FaceMapCoordinates.hasMapPosition(spot))
-                _SpotMarker(
-                  spot: spot,
-                  selected: spot.id == widget.selectedSpotId,
-                  position: FaceMapCoordinates.markerPosition(spot, size)!,
-                  interactive: widget.interactive,
-                  dragging: spot.id == widget.draggingSpotId,
-                  onDragStart: () => widget.onMarkerDragStart?.call(spot.id),
-                  onDragUpdate: (global) {
-                    final local = _globalToLocal(global);
-                    if (local == null) return;
-                    widget.onMarkerDragUpdate?.call(spot.id, local, size);
-                  },
-                  onDragEnd: () => widget.onMarkerDragEnd?.call(spot.id),
-                ),
+            for (final marker in widget.markers)
+              _FaceMarkerDot(
+                selected: marker.id == widget.selectedMarkerId,
+                dragging: marker.id == widget.draggingMarkerId,
+                position: FaceMapCoordinates.markerRecordPosition(
+                  marker,
+                  size,
+                )!,
+                interactive: widget.interactive,
+                onDragStart: () =>
+                    widget.onMarkerDragStart?.call(marker.id),
+                onDragUpdate: (global) {
+                  final local = _globalToLocal(global);
+                  if (local == null) return;
+                  widget.onMarkerDragUpdate?.call(marker.id, local, size);
+                },
+                onDragEnd: () => widget.onMarkerDragEnd?.call(marker.id),
+              ),
           ],
         );
       },
@@ -369,86 +341,63 @@ class _SpotFaceMapCanvasState extends State<SpotFaceMapCanvas> {
   }
 }
 
-class _SpotMarker extends StatelessWidget {
-  const _SpotMarker({
-    required this.spot,
+class _FaceMarkerDot extends StatelessWidget {
+  const _FaceMarkerDot({
     required this.selected,
+    required this.dragging,
     required this.position,
     required this.interactive,
-    required this.dragging,
     this.onDragStart,
     this.onDragUpdate,
     this.onDragEnd,
   });
 
-  final AcneSpot spot;
   final bool selected;
+  final bool dragging;
   final Offset position;
   final bool interactive;
-  final bool dragging;
   final VoidCallback? onDragStart;
   final void Function(Offset global)? onDragUpdate;
   final VoidCallback? onDragEnd;
 
   @override
   Widget build(BuildContext context) {
-    final status = SpotStatus.fromId(spot.status);
-    final color = status == SpotStatus.active
-        ? AppTheme.accentCoral
-        : AppTheme.primaryTeal;
-    final radius = selected ? 11.0 : 8.0;
+    const radius = 9.0;
 
-    Widget marker = Container(
+    Widget dot = Container(
       width: radius * 2,
       height: radius * 2,
       decoration: BoxDecoration(
-        color: color,
+        color: AppTheme.accentCoral,
         shape: BoxShape.circle,
         border: Border.all(
-          color: selected ? Colors.white : color.withValues(alpha: 0.4),
+          color: selected ? Colors.white : AppTheme.accentCoral,
           width: selected ? 2.5 : 1.5,
         ),
         boxShadow: [
           if (selected || dragging)
             BoxShadow(
-              color: color.withValues(alpha: 0.45),
+              color: AppTheme.accentCoral.withValues(alpha: 0.45),
               blurRadius: 10,
               spreadRadius: 1,
             ),
         ],
       ),
-      alignment: Alignment.center,
-      child: selected
-          ? Text(
-              _markerLabel(spot),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-            )
-          : null,
     );
 
     if (interactive) {
-      marker = GestureDetector(
+      dot = GestureDetector(
         onPanStart: (_) => onDragStart?.call(),
         onPanUpdate: (details) => onDragUpdate?.call(details.globalPosition),
         onPanEnd: (_) => onDragEnd?.call(),
-        child: marker,
+        child: dot,
       );
     }
 
     return Positioned(
       left: position.dx - radius,
       top: position.dy - radius,
-      child: marker,
+      child: dot,
     );
   }
-}
-
-String _markerLabel(AcneSpot spot) {
-  final title = spotDisplayTitle(spot).trim();
-  if (title.isEmpty) return '痘';
-  return title.characters.first;
 }

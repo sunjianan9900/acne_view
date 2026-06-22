@@ -9,12 +9,12 @@ import 'tables.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [AcneSpots, CheckInRecords, TreatmentItems, Photos])
+@DriftDatabase(tables: [AcneSpots, SpotFaceMarkers, CheckInRecords, TreatmentItems, Photos])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -28,6 +28,25 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) {
         await migrator.addColumn(acneSpots, acneSpots.faceMapX);
         await migrator.addColumn(acneSpots, acneSpots.faceMapY);
+      }
+      if (from < 5) {
+        await migrator.createTable(spotFaceMarkers);
+        final legacySpots = await (select(acneSpots)
+              ..where((t) => t.faceMapX.isNotNull() & t.faceMapY.isNotNull()))
+            .get();
+        for (final spot in legacySpots) {
+          final x = spot.faceMapX;
+          final y = spot.faceMapY;
+          if (x == null || y == null) continue;
+          await into(spotFaceMarkers).insert(
+            SpotFaceMarkersCompanion.insert(
+              id: '${spot.id}-legacy-marker',
+              spotId: spot.id,
+              mapX: x,
+              mapY: y,
+            ),
+          );
+        }
       }
     },
   );
@@ -88,6 +107,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<int> deleteSpot(String id) async {
+    await (delete(spotFaceMarkers)..where((t) => t.spotId.equals(id))).go();
     final checkIns = await (select(
       checkInRecords,
     )..where((t) => t.spotId.equals(id))).get();
@@ -112,6 +132,27 @@ class AppDatabase extends _$AppDatabase {
       ..where(acneSpots.status.equals('active'));
     final row = await query.getSingle();
     return row.read(acneSpots.id.count()) ?? 0;
+  }
+
+  // --- Spot face markers ---
+
+  Stream<List<SpotFaceMarker>> watchFaceMarkersForSpot(String spotId) {
+    return (select(spotFaceMarkers)..where((t) => t.spotId.equals(spotId)))
+        .watch();
+  }
+
+  Future<int> insertFaceMarker(SpotFaceMarkersCompanion marker) {
+    return into(spotFaceMarkers).insert(marker);
+  }
+
+  Future<int> updateFaceMarkerPosition(String id, double x, double y) {
+    return (update(spotFaceMarkers)..where((t) => t.id.equals(id))).write(
+      SpotFaceMarkersCompanion(mapX: Value(x), mapY: Value(y)),
+    );
+  }
+
+  Future<int> deleteFaceMarker(String id) {
+    return (delete(spotFaceMarkers)..where((t) => t.id.equals(id))).go();
   }
 
   // --- Check-ins ---

@@ -16,6 +16,16 @@ class AcneSpots extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class SpotFaceMarkers extends Table {
+  TextColumn get id => text()();
+  TextColumn get spotId => text().references(AcneSpots, #id)();
+  RealColumn get mapX => real()();
+  RealColumn get mapY => real()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class CheckInRecords extends Table {
   TextColumn get id => text()();
   TextColumn get spotId => text().references(AcneSpots, #id)();

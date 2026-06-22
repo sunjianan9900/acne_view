@@ -509,6 +509,313 @@ class AcneSpotsCompanion extends UpdateCompanion<AcneSpot> {
   }
 }
 
+class $SpotFaceMarkersTable extends SpotFaceMarkers
+    with TableInfo<$SpotFaceMarkersTable, SpotFaceMarker> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SpotFaceMarkersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _spotIdMeta = const VerificationMeta('spotId');
+  @override
+  late final GeneratedColumn<String> spotId = GeneratedColumn<String>(
+    'spot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES acne_spots (id)',
+    ),
+  );
+  static const VerificationMeta _mapXMeta = const VerificationMeta('mapX');
+  @override
+  late final GeneratedColumn<double> mapX = GeneratedColumn<double>(
+    'map_x',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mapYMeta = const VerificationMeta('mapY');
+  @override
+  late final GeneratedColumn<double> mapY = GeneratedColumn<double>(
+    'map_y',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, spotId, mapX, mapY];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'spot_face_markers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SpotFaceMarker> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('spot_id')) {
+      context.handle(
+        _spotIdMeta,
+        spotId.isAcceptableOrUnknown(data['spot_id']!, _spotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_spotIdMeta);
+    }
+    if (data.containsKey('map_x')) {
+      context.handle(
+        _mapXMeta,
+        mapX.isAcceptableOrUnknown(data['map_x']!, _mapXMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mapXMeta);
+    }
+    if (data.containsKey('map_y')) {
+      context.handle(
+        _mapYMeta,
+        mapY.isAcceptableOrUnknown(data['map_y']!, _mapYMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mapYMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SpotFaceMarker map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SpotFaceMarker(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      spotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}spot_id'],
+      )!,
+      mapX: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}map_x'],
+      )!,
+      mapY: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}map_y'],
+      )!,
+    );
+  }
+
+  @override
+  $SpotFaceMarkersTable createAlias(String alias) {
+    return $SpotFaceMarkersTable(attachedDatabase, alias);
+  }
+}
+
+class SpotFaceMarker extends DataClass implements Insertable<SpotFaceMarker> {
+  final String id;
+  final String spotId;
+  final double mapX;
+  final double mapY;
+  const SpotFaceMarker({
+    required this.id,
+    required this.spotId,
+    required this.mapX,
+    required this.mapY,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['spot_id'] = Variable<String>(spotId);
+    map['map_x'] = Variable<double>(mapX);
+    map['map_y'] = Variable<double>(mapY);
+    return map;
+  }
+
+  SpotFaceMarkersCompanion toCompanion(bool nullToAbsent) {
+    return SpotFaceMarkersCompanion(
+      id: Value(id),
+      spotId: Value(spotId),
+      mapX: Value(mapX),
+      mapY: Value(mapY),
+    );
+  }
+
+  factory SpotFaceMarker.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SpotFaceMarker(
+      id: serializer.fromJson<String>(json['id']),
+      spotId: serializer.fromJson<String>(json['spotId']),
+      mapX: serializer.fromJson<double>(json['mapX']),
+      mapY: serializer.fromJson<double>(json['mapY']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'spotId': serializer.toJson<String>(spotId),
+      'mapX': serializer.toJson<double>(mapX),
+      'mapY': serializer.toJson<double>(mapY),
+    };
+  }
+
+  SpotFaceMarker copyWith({
+    String? id,
+    String? spotId,
+    double? mapX,
+    double? mapY,
+  }) => SpotFaceMarker(
+    id: id ?? this.id,
+    spotId: spotId ?? this.spotId,
+    mapX: mapX ?? this.mapX,
+    mapY: mapY ?? this.mapY,
+  );
+  SpotFaceMarker copyWithCompanion(SpotFaceMarkersCompanion data) {
+    return SpotFaceMarker(
+      id: data.id.present ? data.id.value : this.id,
+      spotId: data.spotId.present ? data.spotId.value : this.spotId,
+      mapX: data.mapX.present ? data.mapX.value : this.mapX,
+      mapY: data.mapY.present ? data.mapY.value : this.mapY,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SpotFaceMarker(')
+          ..write('id: $id, ')
+          ..write('spotId: $spotId, ')
+          ..write('mapX: $mapX, ')
+          ..write('mapY: $mapY')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, spotId, mapX, mapY);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpotFaceMarker &&
+          other.id == this.id &&
+          other.spotId == this.spotId &&
+          other.mapX == this.mapX &&
+          other.mapY == this.mapY);
+}
+
+class SpotFaceMarkersCompanion extends UpdateCompanion<SpotFaceMarker> {
+  final Value<String> id;
+  final Value<String> spotId;
+  final Value<double> mapX;
+  final Value<double> mapY;
+  final Value<int> rowid;
+  const SpotFaceMarkersCompanion({
+    this.id = const Value.absent(),
+    this.spotId = const Value.absent(),
+    this.mapX = const Value.absent(),
+    this.mapY = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SpotFaceMarkersCompanion.insert({
+    required String id,
+    required String spotId,
+    required double mapX,
+    required double mapY,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       spotId = Value(spotId),
+       mapX = Value(mapX),
+       mapY = Value(mapY);
+  static Insertable<SpotFaceMarker> custom({
+    Expression<String>? id,
+    Expression<String>? spotId,
+    Expression<double>? mapX,
+    Expression<double>? mapY,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (spotId != null) 'spot_id': spotId,
+      if (mapX != null) 'map_x': mapX,
+      if (mapY != null) 'map_y': mapY,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SpotFaceMarkersCompanion copyWith({
+    Value<String>? id,
+    Value<String>? spotId,
+    Value<double>? mapX,
+    Value<double>? mapY,
+    Value<int>? rowid,
+  }) {
+    return SpotFaceMarkersCompanion(
+      id: id ?? this.id,
+      spotId: spotId ?? this.spotId,
+      mapX: mapX ?? this.mapX,
+      mapY: mapY ?? this.mapY,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (spotId.present) {
+      map['spot_id'] = Variable<String>(spotId.value);
+    }
+    if (mapX.present) {
+      map['map_x'] = Variable<double>(mapX.value);
+    }
+    if (mapY.present) {
+      map['map_y'] = Variable<double>(mapY.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SpotFaceMarkersCompanion(')
+          ..write('id: $id, ')
+          ..write('spotId: $spotId, ')
+          ..write('mapX: $mapX, ')
+          ..write('mapY: $mapY, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CheckInRecordsTable extends CheckInRecords
     with TableInfo<$CheckInRecordsTable, CheckInRecord> {
   @override
@@ -1580,6 +1887,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $AcneSpotsTable acneSpots = $AcneSpotsTable(this);
+  late final $SpotFaceMarkersTable spotFaceMarkers = $SpotFaceMarkersTable(
+    this,
+  );
   late final $CheckInRecordsTable checkInRecords = $CheckInRecordsTable(this);
   late final $TreatmentItemsTable treatmentItems = $TreatmentItemsTable(this);
   late final $PhotosTable photos = $PhotosTable(this);
@@ -1589,6 +1899,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     acneSpots,
+    spotFaceMarkers,
     checkInRecords,
     treatmentItems,
     photos,
@@ -1623,6 +1934,26 @@ typedef $$AcneSpotsTableUpdateCompanionBuilder =
 final class $$AcneSpotsTableReferences
     extends BaseReferences<_$AppDatabase, $AcneSpotsTable, AcneSpot> {
   $$AcneSpotsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$SpotFaceMarkersTable, List<SpotFaceMarker>>
+  _spotFaceMarkersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.spotFaceMarkers,
+    aliasName: 'acne_spots__id__spot_face_markers__spot_id',
+  );
+
+  $$SpotFaceMarkersTableProcessedTableManager get spotFaceMarkersRefs {
+    final manager = $$SpotFaceMarkersTableTableManager(
+      $_db,
+      $_db.spotFaceMarkers,
+    ).filter((f) => f.spotId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _spotFaceMarkersRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 
   static MultiTypedResultKey<$CheckInRecordsTable, List<CheckInRecord>>
   _checkInRecordsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
@@ -1691,6 +2022,31 @@ class $$AcneSpotsTableFilterComposer
     column: $table.faceMapY,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> spotFaceMarkersRefs(
+    Expression<bool> Function($$SpotFaceMarkersTableFilterComposer f) f,
+  ) {
+    final $$SpotFaceMarkersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.spotFaceMarkers,
+      getReferencedColumn: (t) => t.spotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SpotFaceMarkersTableFilterComposer(
+            $db: $db,
+            $table: $db.spotFaceMarkers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<bool> checkInRecordsRefs(
     Expression<bool> Function($$CheckInRecordsTableFilterComposer f) f,
@@ -1803,6 +2159,31 @@ class $$AcneSpotsTableAnnotationComposer
   GeneratedColumn<double> get faceMapY =>
       $composableBuilder(column: $table.faceMapY, builder: (column) => column);
 
+  Expression<T> spotFaceMarkersRefs<T extends Object>(
+    Expression<T> Function($$SpotFaceMarkersTableAnnotationComposer a) f,
+  ) {
+    final $$SpotFaceMarkersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.spotFaceMarkers,
+      getReferencedColumn: (t) => t.spotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SpotFaceMarkersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.spotFaceMarkers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> checkInRecordsRefs<T extends Object>(
     Expression<T> Function($$CheckInRecordsTableAnnotationComposer a) f,
   ) {
@@ -1842,7 +2223,10 @@ class $$AcneSpotsTableTableManager
           $$AcneSpotsTableUpdateCompanionBuilder,
           (AcneSpot, $$AcneSpotsTableReferences),
           AcneSpot,
-          PrefetchHooks Function({bool checkInRecordsRefs})
+          PrefetchHooks Function({
+            bool spotFaceMarkersRefs,
+            bool checkInRecordsRefs,
+          })
         > {
   $$AcneSpotsTableTableManager(_$AppDatabase db, $AcneSpotsTable table)
     : super(
@@ -1907,38 +2291,63 @@ class $$AcneSpotsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({checkInRecordsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (checkInRecordsRefs) db.checkInRecords,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (checkInRecordsRefs)
-                    await $_getPrefetchedData<
-                      AcneSpot,
-                      $AcneSpotsTable,
-                      CheckInRecord
-                    >(
-                      currentTable: table,
-                      referencedTable: $$AcneSpotsTableReferences
-                          ._checkInRecordsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$AcneSpotsTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).checkInRecordsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.spotId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({spotFaceMarkersRefs = false, checkInRecordsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (spotFaceMarkersRefs) db.spotFaceMarkers,
+                    if (checkInRecordsRefs) db.checkInRecords,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (spotFaceMarkersRefs)
+                        await $_getPrefetchedData<
+                          AcneSpot,
+                          $AcneSpotsTable,
+                          SpotFaceMarker
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AcneSpotsTableReferences
+                              ._spotFaceMarkersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AcneSpotsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).spotFaceMarkersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.spotId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (checkInRecordsRefs)
+                        await $_getPrefetchedData<
+                          AcneSpot,
+                          $AcneSpotsTable,
+                          CheckInRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AcneSpotsTableReferences
+                              ._checkInRecordsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AcneSpotsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).checkInRecordsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.spotId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -1955,7 +2364,317 @@ typedef $$AcneSpotsTableProcessedTableManager =
       $$AcneSpotsTableUpdateCompanionBuilder,
       (AcneSpot, $$AcneSpotsTableReferences),
       AcneSpot,
-      PrefetchHooks Function({bool checkInRecordsRefs})
+      PrefetchHooks Function({
+        bool spotFaceMarkersRefs,
+        bool checkInRecordsRefs,
+      })
+    >;
+typedef $$SpotFaceMarkersTableCreateCompanionBuilder =
+    SpotFaceMarkersCompanion Function({
+      required String id,
+      required String spotId,
+      required double mapX,
+      required double mapY,
+      Value<int> rowid,
+    });
+typedef $$SpotFaceMarkersTableUpdateCompanionBuilder =
+    SpotFaceMarkersCompanion Function({
+      Value<String> id,
+      Value<String> spotId,
+      Value<double> mapX,
+      Value<double> mapY,
+      Value<int> rowid,
+    });
+
+final class $$SpotFaceMarkersTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $SpotFaceMarkersTable, SpotFaceMarker> {
+  $$SpotFaceMarkersTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AcneSpotsTable _spotIdTable(_$AppDatabase db) =>
+      db.acneSpots.createAlias('spot_face_markers__spot_id__acne_spots__id');
+
+  $$AcneSpotsTableProcessedTableManager get spotId {
+    final $_column = $_itemColumn<String>('spot_id')!;
+
+    final manager = $$AcneSpotsTableTableManager(
+      $_db,
+      $_db.acneSpots,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_spotIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SpotFaceMarkersTableFilterComposer
+    extends Composer<_$AppDatabase, $SpotFaceMarkersTable> {
+  $$SpotFaceMarkersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get mapX => $composableBuilder(
+    column: $table.mapX,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get mapY => $composableBuilder(
+    column: $table.mapY,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AcneSpotsTableFilterComposer get spotId {
+    final $$AcneSpotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.spotId,
+      referencedTable: $db.acneSpots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AcneSpotsTableFilterComposer(
+            $db: $db,
+            $table: $db.acneSpots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SpotFaceMarkersTableOrderingComposer
+    extends Composer<_$AppDatabase, $SpotFaceMarkersTable> {
+  $$SpotFaceMarkersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get mapX => $composableBuilder(
+    column: $table.mapX,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get mapY => $composableBuilder(
+    column: $table.mapY,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AcneSpotsTableOrderingComposer get spotId {
+    final $$AcneSpotsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.spotId,
+      referencedTable: $db.acneSpots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AcneSpotsTableOrderingComposer(
+            $db: $db,
+            $table: $db.acneSpots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SpotFaceMarkersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SpotFaceMarkersTable> {
+  $$SpotFaceMarkersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get mapX =>
+      $composableBuilder(column: $table.mapX, builder: (column) => column);
+
+  GeneratedColumn<double> get mapY =>
+      $composableBuilder(column: $table.mapY, builder: (column) => column);
+
+  $$AcneSpotsTableAnnotationComposer get spotId {
+    final $$AcneSpotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.spotId,
+      referencedTable: $db.acneSpots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AcneSpotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.acneSpots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SpotFaceMarkersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SpotFaceMarkersTable,
+          SpotFaceMarker,
+          $$SpotFaceMarkersTableFilterComposer,
+          $$SpotFaceMarkersTableOrderingComposer,
+          $$SpotFaceMarkersTableAnnotationComposer,
+          $$SpotFaceMarkersTableCreateCompanionBuilder,
+          $$SpotFaceMarkersTableUpdateCompanionBuilder,
+          (SpotFaceMarker, $$SpotFaceMarkersTableReferences),
+          SpotFaceMarker,
+          PrefetchHooks Function({bool spotId})
+        > {
+  $$SpotFaceMarkersTableTableManager(
+    _$AppDatabase db,
+    $SpotFaceMarkersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SpotFaceMarkersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SpotFaceMarkersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SpotFaceMarkersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> spotId = const Value.absent(),
+                Value<double> mapX = const Value.absent(),
+                Value<double> mapY = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SpotFaceMarkersCompanion(
+                id: id,
+                spotId: spotId,
+                mapX: mapX,
+                mapY: mapY,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String spotId,
+                required double mapX,
+                required double mapY,
+                Value<int> rowid = const Value.absent(),
+              }) => SpotFaceMarkersCompanion.insert(
+                id: id,
+                spotId: spotId,
+                mapX: mapX,
+                mapY: mapY,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SpotFaceMarkersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({spotId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (spotId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.spotId,
+                                referencedTable:
+                                    $$SpotFaceMarkersTableReferences
+                                        ._spotIdTable(db),
+                                referencedColumn:
+                                    $$SpotFaceMarkersTableReferences
+                                        ._spotIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SpotFaceMarkersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SpotFaceMarkersTable,
+      SpotFaceMarker,
+      $$SpotFaceMarkersTableFilterComposer,
+      $$SpotFaceMarkersTableOrderingComposer,
+      $$SpotFaceMarkersTableAnnotationComposer,
+      $$SpotFaceMarkersTableCreateCompanionBuilder,
+      $$SpotFaceMarkersTableUpdateCompanionBuilder,
+      (SpotFaceMarker, $$SpotFaceMarkersTableReferences),
+      SpotFaceMarker,
+      PrefetchHooks Function({bool spotId})
     >;
 typedef $$CheckInRecordsTableCreateCompanionBuilder =
     CheckInRecordsCompanion Function({
@@ -3129,6 +3848,8 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$AcneSpotsTableTableManager get acneSpots =>
       $$AcneSpotsTableTableManager(_db, _db.acneSpots);
+  $$SpotFaceMarkersTableTableManager get spotFaceMarkers =>
+      $$SpotFaceMarkersTableTableManager(_db, _db.spotFaceMarkers);
   $$CheckInRecordsTableTableManager get checkInRecords =>
       $$CheckInRecordsTableTableManager(_db, _db.checkInRecords);
   $$TreatmentItemsTableTableManager get treatmentItems =>

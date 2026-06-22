@@ -37,12 +37,31 @@ class AcneSpotRepository {
   Future<void> updateSpotMapPosition(String id, double? x, double? y) =>
       _db.updateSpotMapPosition(id, x, y);
 
+  Stream<List<SpotFaceMarker>> watchFaceMarkers(String spotId) =>
+      _db.watchFaceMarkersForSpot(spotId);
+
+  Future<String> addFaceMarker(String spotId, double x, double y) async {
+    final id = _uuid.v4();
+    await _db.insertFaceMarker(
+      SpotFaceMarkersCompanion.insert(
+        id: id,
+        spotId: spotId,
+        mapX: x,
+        mapY: y,
+      ),
+    );
+    return id;
+  }
+
+  Future<void> updateFaceMarkerPosition(String id, double x, double y) =>
+      _db.updateFaceMarkerPosition(id, x, y);
+
+  Future<void> deleteFaceMarker(String id) => _db.deleteFaceMarker(id);
+
   Future<String> createSpot({
     required FaceRegion region,
     String title = '',
     String note = '',
-    double? faceMapX,
-    double? faceMapY,
   }) async {
     final id = _uuid.v4();
     await _db.insertSpot(
@@ -53,8 +72,6 @@ class AcneSpotRepository {
         createdAt: DateTime.now(),
         note: Value(note),
         status: const Value('active'),
-        faceMapX: Value(faceMapX),
-        faceMapY: Value(faceMapY),
       ),
     );
     return id;
@@ -308,6 +325,11 @@ final allSpotsProvider = StreamProvider<List<AcneSpot>>((ref) {
 });
 
 final selectedHomeSpotIdProvider = StateProvider<String?>((ref) => null);
+
+final spotFaceMarkersProvider =
+    StreamProvider.family<List<SpotFaceMarker>, String>((ref, spotId) {
+      return ref.watch(spotRepositoryProvider).watchFaceMarkers(spotId);
+    });
 
 final spotTimelineProvider =
     FutureProvider.family<List<SpotCheckInPhoto>, String>((ref, spotId) async {

@@ -37,11 +37,27 @@ class _SpySpotRepository implements AcneSpotRepository {
     required FaceRegion region,
     String title = '',
     String note = '',
-    double? faceMapX,
-    double? faceMapY,
   }) async {
     return 'fake';
   }
+
+  @override
+  Stream<List<SpotFaceMarker>> watchFaceMarkers(String spotId) =>
+      Stream<List<SpotFaceMarker>>.value(const []);
+
+  @override
+  Future<String> addFaceMarker(String spotId, double x, double y) async =>
+      'marker-fake';
+
+  @override
+  Future<void> updateFaceMarkerPosition(
+    String id,
+    double x,
+    double y,
+  ) async {}
+
+  @override
+  Future<void> deleteFaceMarker(String id) async {}
 
   @override
   Future<void> updateSpotMapPosition(String id, double? x, double? y) async {}

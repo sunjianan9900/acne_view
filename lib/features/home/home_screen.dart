@@ -82,7 +82,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ],
           rightPanel: isDesktop
-              ? _SpotDetailPanel(spot: selectedSpot, allSpots: spots)
+              ? _SpotDetailPanel(spot: selectedSpot)
               : null,
           child: HomeBody(
             spots: spots,
@@ -381,10 +381,9 @@ class _SpotTimelinePanel extends ConsumerWidget {
 }
 
 class _SpotDetailPanel extends ConsumerStatefulWidget {
-  const _SpotDetailPanel({required this.spot, required this.allSpots});
+  const _SpotDetailPanel({required this.spot});
 
   final AcneSpot? spot;
-  final List<AcneSpot> allSpots;
 
   @override
   ConsumerState<_SpotDetailPanel> createState() => _SpotDetailPanelState();
@@ -566,10 +565,7 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
           ],
         ),
         const SizedBox(height: 16),
-        SpotFaceMapPreview(
-          spots: widget.allSpots,
-          selectedSpotId: spot.id,
-        ),
+        SpotFaceMapPreview(spotId: spot.id),
         const SizedBox(height: 16),
         Text(
           '备注日志',
