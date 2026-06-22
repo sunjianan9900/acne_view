@@ -14,6 +14,7 @@ import '../../shared/models/spot_display.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/models/treatment_type.dart';
 import '../../shared/photo/photo_viewer.dart';
+import '../check_in/check_in_detail_dialog.dart';
 
 Future<void> showSpotDetailDialog(
   BuildContext context,
@@ -108,51 +109,28 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
     return items.first;
   }
 
-  void _showEditNoteDialog(AcneSpot spot) {
-    final controller = TextEditingController(text: spot.note);
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('编辑备注'),
-        content: TextField(
-          controller: controller,
-          minLines: 4,
-          maxLines: 8,
-          decoration: const InputDecoration(
-            hintText: '记录这颗痘痘的变化、观察、用药和任何想保留的日志',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await _saveNote(spot.id, controller.text);
-            },
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    ).whenComplete(controller.dispose);
-  }
+  Future<void> _showEditCurrentRecord(AcneSpot spot) async {
+    final items = await ref.read(spotTimelineProvider(spot.id).future);
+    final selectedItem = _resolveSelectedItem(items);
+    if (selectedItem == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('暂无打卡记录可编辑')),
+        );
+      }
+      return;
+    }
 
-  Future<void> _saveNote(String spotId, String note) async {
-    try {
-      await ref.read(spotRepositoryProvider).updateSpotNote(spotId, note.trim());
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('备注已保存')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
-      }
+    if (!mounted) return;
+
+    await showCheckInDetailDialog(
+      context,
+      ref,
+      checkInId: selectedItem.checkIn.id,
+      initialEditing: true,
+    );
+    if (mounted) {
+      ref.invalidate(spotTimelineProvider(spot.id));
     }
   }
 
@@ -328,7 +306,7 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
           icon: Icons.edit_outlined,
           label: '编辑',
           color: AppTheme.primaryTeal,
-          onPressed: () => _showEditNoteDialog(spot),
+          onPressed: () => _showEditCurrentRecord(spot),
         ),
         const SizedBox(width: 12),
         _RoundIconButton(
@@ -437,7 +415,7 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
                         child: _DetailStack(
                           spot: spot,
                           selectedItem: selectedItem,
-                          onEditNote: () => _showEditNoteDialog(spot),
+                          onEditRecord: () => _showEditCurrentRecord(spot),
                         ),
                       ),
                     ],
@@ -790,12 +768,12 @@ class _DetailStack extends ConsumerWidget {
   const _DetailStack({
     required this.spot,
     required this.selectedItem,
-    required this.onEditNote,
+    required this.onEditRecord,
   });
 
   final AcneSpot spot;
   final SpotCheckInPhoto? selectedItem;
-  final VoidCallback onEditNote;
+  final VoidCallback onEditRecord;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -805,7 +783,7 @@ class _DetailStack extends ConsumerWidget {
         ? AcnePhase.fromIdOrNull(selectedItem!.checkIn.phase)
         : null;
     final recordDate = selectedItem?.checkIn.checkInDate ?? spot.createdAt;
-    final note = spot.note.trim();
+    final note = selectedItem?.checkIn.note.trim() ?? '';
     final medication = _medicationText(selectedItem);
 
     return Column(
@@ -852,7 +830,7 @@ class _DetailStack extends ConsumerWidget {
           icon: Icons.notes_rounded,
           title: '备注',
           actionLabel: '编辑',
-          onAction: onEditNote,
+          onAction: onEditRecord,
           child: Text(
             note.isEmpty ? '无' : note,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(

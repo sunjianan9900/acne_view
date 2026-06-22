@@ -18,17 +18,26 @@ Future<void> showCheckInDetailDialog(
   BuildContext context,
   WidgetRef ref, {
   required String checkInId,
+  bool initialEditing = false,
 }) {
   return showDialog<void>(
     context: context,
-    builder: (ctx) => CheckInDetailDialog(checkInId: checkInId),
+    builder: (ctx) => CheckInDetailDialog(
+      checkInId: checkInId,
+      initialEditing: initialEditing,
+    ),
   );
 }
 
 class CheckInDetailDialog extends ConsumerStatefulWidget {
-  const CheckInDetailDialog({super.key, required this.checkInId});
+  const CheckInDetailDialog({
+    super.key,
+    required this.checkInId,
+    this.initialEditing = false,
+  });
 
   final String checkInId;
+  final bool initialEditing;
 
   @override
   ConsumerState<CheckInDetailDialog> createState() =>
@@ -36,7 +45,7 @@ class CheckInDetailDialog extends ConsumerStatefulWidget {
 }
 
 class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
-  bool _editing = false;
+  late bool _editing;
   bool _saving = false;
   bool _deleting = false;
   AcnePhase _selectedPhase = AcnePhase.swollen;
@@ -44,6 +53,23 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
   final _noteController = TextEditingController();
   final List<_TreatmentRow> _treatments = [];
   bool _formReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _editing = widget.initialEditing;
+  }
+
+  @override
+  void didUpdateWidget(covariant CheckInDetailDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.checkInId != widget.checkInId) {
+      _editing = widget.initialEditing;
+      _formReady = false;
+    } else if (oldWidget.initialEditing != widget.initialEditing) {
+      _editing = widget.initialEditing;
+    }
+  }
 
   @override
   void dispose() {
