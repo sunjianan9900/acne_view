@@ -1,0 +1,2 @@
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Verify shell panel composition rules and shared content widget reuse after the face map update."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Verify the local selection-state convention used to swap the right panel without route navigation."}

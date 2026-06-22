@@ -1,0 +1,2 @@
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Shell-scoped detail panel and reusable content widget patterns for the face map right-side drilldown."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Local selection state convention for desktop-only shell panel switching."}

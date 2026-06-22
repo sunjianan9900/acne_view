@@ -25,51 +25,9 @@ class RegionSpotsScreen extends ConsumerWidget {
       );
     }
 
-    final spotsAsync = ref.watch(spotsByRegionProvider(regionId));
-
     return Scaffold(
       appBar: AppBar(title: Text('${region.label} - 痘痘列表')),
-      body: spotsAsync.when(
-        data: (spots) {
-          if (spots.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.face_retouching_natural,
-                    size: 64,
-                    color: AppTheme.primaryTeal.withValues(alpha: 0.4),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '该区域暂无痘痘记录',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton.icon(
-                    onPressed: () => _createSpot(context, ref, region),
-                    icon: const Icon(Icons.add),
-                    label: const Text('添加痘痘'),
-                  ),
-                ],
-              ),
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: spots.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              return _SpotCard(spot: spots[index], region: region);
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('加载失败: $e')),
-      ),
+      body: RegionSpotsContent(region: region),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _createSpot(context, ref, region),
         icon: const Icon(Icons.add),
@@ -89,6 +47,101 @@ class RegionSpotsScreen extends ConsumerWidget {
         context,
       ).showSnackBar(const SnackBar(content: Text('痘痘已创建')));
     }
+  }
+}
+
+class RegionSpotsContent extends ConsumerWidget {
+  const RegionSpotsContent({
+    super.key,
+    required this.region,
+    this.onClearSelection,
+    this.showHeader = true,
+  });
+
+  final FaceRegion region;
+  final VoidCallback? onClearSelection;
+  final bool showHeader;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final spotsAsync = ref.watch(spotsByRegionProvider(region.id));
+
+    return spotsAsync.when(
+      data: (spots) {
+        if (showHeader) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${region.label} · 痘痘列表',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  if (onClearSelection != null)
+                    TextButton(
+                      onPressed: onClearSelection,
+                      child: const Text('查看全部'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: _RegionSpotsList(spots: spots, region: region),
+              ),
+            ],
+          );
+        }
+        return _RegionSpotsList(spots: spots, region: region);
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('加载失败: $e')),
+    );
+  }
+}
+
+class _RegionSpotsList extends StatelessWidget {
+  const _RegionSpotsList({required this.spots, required this.region});
+
+  final List<AcneSpot> spots;
+  final FaceRegion region;
+
+  @override
+  Widget build(BuildContext context) {
+    if (spots.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.face_retouching_natural,
+              size: 64,
+              color: AppTheme.primaryTeal.withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '该区域暂无痘痘记录',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: spots.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        return _SpotCard(spot: spots[index], region: region);
+      },
+    );
   }
 }
 

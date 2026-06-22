@@ -10,13 +10,21 @@ import '../../shared/models/face_region.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/widgets/douji_shell.dart';
 import 'add_spot_dialog.dart';
+import 'region_spots_screen.dart';
 import 'widgets/face_map_painter.dart';
 
-class FaceMapScreen extends ConsumerWidget {
+class FaceMapScreen extends ConsumerStatefulWidget {
   const FaceMapScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FaceMapScreen> createState() => _FaceMapScreenState();
+}
+
+class _FaceMapScreenState extends ConsumerState<FaceMapScreen> {
+  FaceRegion? _selectedRegion;
+
+  @override
+  Widget build(BuildContext context) {
     final regionCounts = ref.watch(regionCountsProvider);
     final allSpots = ref.watch(allSpotsProvider);
     final isDesktop = MediaQuery.of(context).size.width >= 1080;
@@ -32,11 +40,19 @@ class FaceMapScreen extends ConsumerWidget {
         ),
       ],
       rightPanel: isDesktop
-          ? allSpots.when(
-              data: (spots) => _SpotListPanel(spots: spots),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('加载失败: $e')),
-            )
+          ? _selectedRegion == null
+                ? allSpots.when(
+                    data: (spots) => _SpotListPanel(spots: spots),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(child: Text('加载失败: $e')),
+                  )
+                : RegionSpotsContent(
+                    region: _selectedRegion!,
+                    onClearSelection: () =>
+                        setState(() => _selectedRegion = null),
+                    showHeader: true,
+                  )
           : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -52,7 +68,13 @@ class FaceMapScreen extends ConsumerWidget {
               child: regionCounts.when(
                 data: (counts) => FaceMapWidget(
                   regionCounts: counts,
-                  onRegionTap: (region) => context.push('/region/${region.id}'),
+                  onRegionTap: (region) {
+                    if (isDesktop) {
+                      setState(() => _selectedRegion = region);
+                      return;
+                    }
+                    context.push('/region/${region.id}');
+                  },
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: Text('加载失败: $e')),
@@ -73,7 +95,12 @@ class FaceMapScreen extends ConsumerWidget {
     final spot = await ref.read(spotRepositoryProvider).getSpot(spotId);
     if (!context.mounted || spot == null) return;
 
-    context.push('/region/${spot.faceRegion}');
+    final region = FaceRegion.fromId(spot.faceRegion);
+    if (MediaQuery.of(context).size.width >= 1080 && region != null) {
+      setState(() => _selectedRegion = region);
+    } else {
+      context.push('/region/${spot.faceRegion}');
+    }
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('痘痘已创建')));

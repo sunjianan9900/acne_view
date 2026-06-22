@@ -18,6 +18,21 @@ Questions to answer:
 
 (To be filled by the team)
 
+### Convention: Local Selection State for Shell Views
+
+**What**: Use local `State`/`StatefulWidget` selection for desktop-only shell drilldowns when the selection only affects the current screen's right panel.
+
+**Why**: This keeps the interaction lightweight and avoids promoting short-lived UI state into global providers.
+
+**Example**:
+```dart
+class _FaceMapScreenState extends ConsumerState<FaceMapScreen> {
+  FaceRegion? _selectedRegion;
+}
+```
+
+**Related**: Use Riverpod providers for shared data sources, not for one-screen panel selection.
+
 ---
 
 ## State Categories
