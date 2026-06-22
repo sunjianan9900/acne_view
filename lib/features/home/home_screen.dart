@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -10,8 +11,10 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/models/acne_phase.dart';
 import '../../shared/models/spot_display.dart';
 import '../../shared/models/spot_status.dart';
+import '../../shared/models/treatment_type.dart';
 import '../../shared/photo/add_photo_flow.dart';
 import '../../shared/widgets/douji_shell.dart';
+import '../check_in/check_in_detail_dialog.dart';
 import '../face_map/add_spot_dialog.dart';
 import 'spot_detail_dialog.dart';
 
@@ -23,6 +26,10 @@ Future<void> _addSpotFromHome(BuildContext context, WidgetRef ref) async {
   ScaffoldMessenger.of(
     context,
   ).showSnackBar(const SnackBar(content: Text('痘痘已创建')));
+}
+
+void _homeLog(String message) {
+  debugPrint('[HomeScreen] $message');
 }
 
 class HomeScreen extends ConsumerWidget {
@@ -37,6 +44,9 @@ class HomeScreen extends ConsumerWidget {
       next.whenData((spots) {
         final current = ref.read(selectedHomeSpotIdProvider);
         final resolved = _resolveSelectedId(spots, current);
+        _homeLog(
+          'allSpotsProvider update: count=${spots.length}, current=$current, resolved=$resolved',
+        );
         if (resolved != current) {
           ref.read(selectedHomeSpotIdProvider.notifier).state = resolved;
         }
@@ -47,6 +57,9 @@ class HomeScreen extends ConsumerWidget {
       data: (spots) {
         final effectiveId = _resolveSelectedId(spots, selectedId);
         final selectedSpot = _resolveSelectedSpot(spots, effectiveId);
+        _homeLog(
+          'build data: count=${spots.length}, selectedId=$selectedId, effectiveId=$effectiveId, selectedSpot=${selectedSpot?.id}, desktop=${MediaQuery.of(context).size.width >= 1080}',
+        );
         if (effectiveId != selectedId) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             ref.read(selectedHomeSpotIdProvider.notifier).state = effectiveId;
@@ -80,10 +93,18 @@ class HomeScreen extends ConsumerWidget {
         subtitle: '加载中…',
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, _) => DoujiShell(
+      error: (e, st) => DoujiShell(
         title: '我的痘痘',
         subtitle: '加载失败',
-        child: Center(child: Text('加载失败: $e')),
+        child: Center(
+          child: Builder(
+            builder: (context) {
+              _homeLog('allSpotsProvider error: $e');
+              _homeLog('allSpotsProvider stack: $st');
+              return Text('加载失败: $e');
+            },
+          ),
+        ),
       ),
     );
   }
@@ -120,19 +141,21 @@ class HomeBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (isDesktop) {
+      final spot = selectedSpot;
+      _homeLog('HomeBody desktop: spots=${spots.length}, selected=${spot?.id}');
       return Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
             width: 250,
-            child: _SpotListPanel(spots: spots, selectedSpot: selectedSpot),
+            child: _SpotListPanel(spots: spots, selectedSpot: spot),
           ),
           const VerticalDivider(width: 1, color: AppTheme.panelBorder),
           const SizedBox(width: 20),
           Expanded(
-            child: selectedSpot == null
+            child: spot == null
                 ? const _EmptySpotDetail()
-                : _SpotTimelinePanel(spot: selectedSpot!),
+                : _SpotTimelinePanel(spot: spot),
           ),
         ],
       );
@@ -343,13 +366,8 @@ class _SpotTimelinePanel extends ConsumerWidget {
         Expanded(
           child: timeline.when(
             data: (items) => items.isEmpty
-                ? const _EmptySpotDetail()
-                : Center(
-                    child: Text(
-                      '请在详情弹窗中查看该痘痘的完整变化记录',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
+                ? _AddPhotoPrompt(spotId: spot.id)
+                : _PhotoTimelineList(spot: spot, items: items),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('加载失败: $e')),
           ),
@@ -415,11 +433,13 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
   Widget build(BuildContext context) {
     final spot = widget.spot;
     if (spot == null) {
+      _homeLog('detail panel built without selected spot');
       return const _EmptySpotDetail();
     }
 
     final status = SpotStatus.fromId(spot.status);
     final timeline = ref.watch(spotTimelineProvider(spot.id));
+    _homeLog('detail panel build: spot=${spot.id}, noteLen=${spot.note.length}');
     final dateFormat = DateFormat('yyyy-MM-dd');
     final phaseLabel = timeline.maybeWhen(
       data: (items) {
@@ -545,6 +565,236 @@ class _EmptySpotDetail extends StatelessWidget {
           context,
         ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
       ),
+    );
+  }
+}
+
+class _PhotoTimelineList extends StatelessWidget {
+  const _PhotoTimelineList({required this.spot, required this.items});
+
+  final AcneSpot spot;
+  final List<SpotCheckInPhoto> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateFormat = DateFormat('MM-dd HH:mm');
+
+    return ListView.separated(
+      itemCount: items.length + 1,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        if (index == items.length) {
+          return _AddPhotoListTile(spotId: spot.id);
+        }
+        final item = items[index];
+        return _TimelineListItem(
+          item: item,
+          dayLabel: _dayLabel(spot.createdAt, item.checkIn.checkInDate),
+          phaseLabel: _phaseLabel(item),
+          phaseColor: _phaseColor(item),
+          dateLabel: dateFormat.format(item.checkIn.checkInDate),
+        );
+      },
+    );
+  }
+
+  String _dayLabel(DateTime created, DateTime checkIn) {
+    final start = DateTime(created.year, created.month, created.day);
+    final current = DateTime(checkIn.year, checkIn.month, checkIn.day);
+    final days = current.difference(start).inDays + 1;
+    return '第 $days 天';
+  }
+
+  String _phaseLabel(SpotCheckInPhoto item) {
+    final phase = AcnePhase.fromIdOrNull(item.checkIn.phase);
+    return phase?.label ?? '未标记';
+  }
+
+  Color _phaseColor(SpotCheckInPhoto item) {
+    final phase = AcnePhase.fromIdOrNull(item.checkIn.phase);
+    return phase == null ? AppTheme.textSecondary : acnePhaseColor(phase);
+  }
+}
+
+class _TimelineListItem extends ConsumerWidget {
+  const _TimelineListItem({
+    required this.item,
+    required this.dayLabel,
+    required this.phaseLabel,
+    required this.phaseColor,
+    required this.dateLabel,
+  });
+
+  final SpotCheckInPhoto item;
+  final String dayLabel;
+  final String phaseLabel;
+  final Color phaseColor;
+  final String dateLabel;
+
+  String _medicationText() {
+    final medications = item.treatments
+        .where((t) => TreatmentType.fromId(t.type) == TreatmentType.medication)
+        .map((t) => t.name)
+        .where((name) => name.isNotEmpty)
+        .toList();
+    if (medications.isEmpty) return '无';
+    return medications.join('、');
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photoPath = item.photo?.filePath;
+    final note = item.checkIn.note.trim();
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: photoPath != null
+            ? () => showCheckInDetailDialog(
+                context,
+                ref,
+                checkInId: item.checkIn.id,
+              )
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 80,
+                  height: 80,
+                  child: photoPath != null
+                      ? Image.file(
+                          File(photoPath),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => _photoPlaceholder(),
+                        )
+                      : _photoPlaceholder(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: phaseColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '$dayLabel · $phaseLabel',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: phaseColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          dateLabel,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _InfoLine(label: '药物', value: _medicationText()),
+                    const SizedBox(height: 4),
+                    _InfoLine(
+                      label: '备注',
+                      value: note.isEmpty ? '无' : note,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _photoPlaceholder() {
+    return ColoredBox(
+      color: AppTheme.softRose,
+      child: const Icon(Icons.image_not_supported, color: AppTheme.brandPink),
+    );
+  }
+}
+
+class _InfoLine extends StatelessWidget {
+  const _InfoLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label：',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTheme.textSecondary,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.bodySmall,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddPhotoPrompt extends StatelessWidget {
+  const _AddPhotoPrompt({required this.spotId});
+
+  final String spotId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: FilledButton.icon(
+        onPressed: () => showAddPhotoOptions(context, spotId),
+        icon: const Icon(Icons.camera_alt_outlined),
+        label: const Text('添加首张照片'),
+      ),
+    );
+  }
+}
+
+class _AddPhotoListTile extends StatelessWidget {
+  const _AddPhotoListTile({required this.spotId});
+
+  final String spotId;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: () => showAddPhotoOptions(context, spotId),
+      icon: const Icon(Icons.camera_alt_outlined),
+      label: const Text('继续添加照片'),
     );
   }
 }
