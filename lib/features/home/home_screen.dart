@@ -840,6 +840,20 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
           ),
         ),
         const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton(
+            onPressed: _savingNote ? null : _saveNote,
+            child: _savingNote
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('保存备注'),
+          ),
+        ),
+        if (isActive || isConcluded) const SizedBox(height: 10),
         if (isActive)
           Align(
             alignment: Alignment.centerRight,
@@ -872,20 +886,6 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
               label: const Text('撤销收官'),
             ),
           ),
-        if (isActive || isConcluded) const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerRight,
-          child: FilledButton(
-            onPressed: _savingNote ? null : _saveNote,
-            child: _savingNote
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('保存备注'),
-          ),
-        ),
       ],
     );
   }
