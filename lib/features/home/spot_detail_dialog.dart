@@ -18,19 +18,28 @@ Future<void> showSpotDetailDialog(
   BuildContext context,
   WidgetRef ref, {
   required String initialSpotId,
+  String? initialCheckInId,
 }) {
   return showDialog<void>(
     context: context,
     barrierDismissible: true,
     barrierColor: Colors.black.withValues(alpha: 0.42),
-    builder: (ctx) => SpotDetailDialog(initialSpotId: initialSpotId),
+    builder: (ctx) => SpotDetailDialog(
+      initialSpotId: initialSpotId,
+      initialCheckInId: initialCheckInId,
+    ),
   );
 }
 
 class SpotDetailDialog extends ConsumerStatefulWidget {
-  const SpotDetailDialog({super.key, required this.initialSpotId});
+  const SpotDetailDialog({
+    super.key,
+    required this.initialSpotId,
+    this.initialCheckInId,
+  });
 
   final String initialSpotId;
+  final String? initialCheckInId;
 
   @override
   ConsumerState<SpotDetailDialog> createState() => _SpotDetailDialogState();
@@ -38,12 +47,14 @@ class SpotDetailDialog extends ConsumerStatefulWidget {
 
 class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
   String? _currentSpotId;
+  String? _currentCheckInId;
   int _pageDirection = 1;
 
   @override
   void initState() {
     super.initState();
     _currentSpotId = widget.initialSpotId;
+    _currentCheckInId = widget.initialCheckInId;
   }
 
   @override
@@ -51,6 +62,9 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialSpotId != widget.initialSpotId) {
       _currentSpotId = widget.initialSpotId;
+      _currentCheckInId = widget.initialCheckInId;
+    } else if (oldWidget.initialCheckInId != widget.initialCheckInId) {
+      _currentCheckInId = widget.initialCheckInId;
     }
   }
 
@@ -75,8 +89,20 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
   void _selectSpot(String spotId, {required int direction}) {
     setState(() {
       _currentSpotId = spotId;
+      _currentCheckInId = null;
       _pageDirection = direction;
     });
+  }
+
+  SpotCheckInPhoto? _resolveSelectedItem(List<SpotCheckInPhoto> items) {
+    if (items.isEmpty) return null;
+    final checkInId = _currentCheckInId;
+    if (checkInId != null) {
+      for (final item in items) {
+        if (item.checkIn.id == checkInId) return item;
+      }
+    }
+    return items.first;
   }
 
   void _showEditNoteDialog(AcneSpot spot) {
@@ -322,8 +348,11 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
     List<AcneSpot> spots,
     int currentIndex,
   ) {
-    final photoAsync = ref.watch(spotThumbnailProvider(spot.id));
     final timelineAsync = ref.watch(spotTimelineProvider(spot.id));
+    final selectedItem = timelineAsync.maybeWhen(
+      data: _resolveSelectedItem,
+      orElse: () => null,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -340,8 +369,7 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
                     Expanded(
                       child: _HeroPhotoPanel(
                         spot: spot,
-                        photoAsync: photoAsync,
-                        timelineAsync: timelineAsync,
+                        selectedItem: selectedItem,
                         onPrevious: currentIndex > 0
                             ? () => _selectSpot(
                                 spots[currentIndex - 1].id,
@@ -355,7 +383,7 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
                               )
                             : null,
                         onOpenImage: () {
-                          final filePath = photoAsync.valueOrNull?.filePath;
+                          final filePath = selectedItem?.photo?.filePath;
                           if (filePath == null) return;
                           showPhotoViewer(context, filePath);
                         },
@@ -393,7 +421,7 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
                 flex: 38,
                 child: _DetailStack(
                   spot: spot,
-                  timelineAsync: timelineAsync,
+                  selectedItem: selectedItem,
                   onEditNote: () => _showEditNoteDialog(spot),
                 ),
               ),
@@ -408,8 +436,7 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
 class _HeroPhotoPanel extends StatelessWidget {
   const _HeroPhotoPanel({
     required this.spot,
-    required this.photoAsync,
-    required this.timelineAsync,
+    required this.selectedItem,
     required this.onPrevious,
     required this.onNext,
     required this.onOpenImage,
@@ -417,8 +444,7 @@ class _HeroPhotoPanel extends StatelessWidget {
   });
 
   final AcneSpot spot;
-  final AsyncValue<Photo?> photoAsync;
-  final AsyncValue<List<SpotCheckInPhoto>> timelineAsync;
+  final SpotCheckInPhoto? selectedItem;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
   final VoidCallback onOpenImage;
@@ -442,10 +468,9 @@ class _HeroPhotoPanel extends StatelessWidget {
         );
       },
       child: _HeroPhotoContent(
-        key: ValueKey(spot.id),
+        key: ValueKey('${spot.id}-${selectedItem?.checkIn.id ?? 'latest'}'),
         spot: spot,
-        photoAsync: photoAsync,
-        timelineAsync: timelineAsync,
+        selectedItem: selectedItem,
         onPrevious: onPrevious,
         onNext: onNext,
         onOpenImage: onOpenImage,
@@ -458,16 +483,14 @@ class _HeroPhotoContent extends StatelessWidget {
   const _HeroPhotoContent({
     super.key,
     required this.spot,
-    required this.photoAsync,
-    required this.timelineAsync,
+    required this.selectedItem,
     required this.onPrevious,
     required this.onNext,
     required this.onOpenImage,
   });
 
   final AcneSpot spot;
-  final AsyncValue<Photo?> photoAsync;
-  final AsyncValue<List<SpotCheckInPhoto>> timelineAsync;
+  final SpotCheckInPhoto? selectedItem;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
   final VoidCallback onOpenImage;
@@ -475,13 +498,10 @@ class _HeroPhotoContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = SpotStatus.fromId(spot.status);
-    final latest = timelineAsync.valueOrNull?.isNotEmpty == true
-        ? timelineAsync.valueOrNull!.first
+    final phase = selectedItem != null
+        ? AcnePhase.fromIdOrNull(selectedItem!.checkIn.phase)
         : null;
-    final phase = latest != null
-        ? AcnePhase.fromIdOrNull(latest.checkIn.phase)
-        : null;
-    final photoPath = photoAsync.valueOrNull?.filePath;
+    final photoPath = selectedItem?.photo?.filePath;
 
     return Container(
       decoration: BoxDecoration(
@@ -743,27 +763,24 @@ class _SpotPreviewPhoto extends StatelessWidget {
 class _DetailStack extends ConsumerWidget {
   const _DetailStack({
     required this.spot,
-    required this.timelineAsync,
+    required this.selectedItem,
     required this.onEditNote,
   });
 
   final AcneSpot spot;
-  final AsyncValue<List<SpotCheckInPhoto>> timelineAsync;
+  final SpotCheckInPhoto? selectedItem;
   final VoidCallback onEditNote;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = SpotStatus.fromId(spot.status);
     final phaseLabels = ref.watch(phaseLabelsProvider);
-    final latest = timelineAsync.valueOrNull?.isNotEmpty == true
-        ? timelineAsync.valueOrNull!.first
+    final phase = selectedItem != null
+        ? AcnePhase.fromIdOrNull(selectedItem!.checkIn.phase)
         : null;
-    final phase = latest != null
-        ? AcnePhase.fromIdOrNull(latest.checkIn.phase)
-        : null;
-    final latestDate = latest?.checkIn.checkInDate ?? spot.createdAt;
+    final recordDate = selectedItem?.checkIn.checkInDate ?? spot.createdAt;
     final note = spot.note.trim();
-    final medication = _medicationText(latest);
+    final medication = _medicationText(selectedItem);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -772,7 +789,7 @@ class _DetailStack extends ConsumerWidget {
           icon: Icons.event_note_rounded,
           title: '记录时间',
           child: Text(
-            DateFormat('yyyy-MM-dd HH:mm').format(latestDate),
+            DateFormat('yyyy-MM-dd HH:mm').format(recordDate),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
               fontSize: 24,

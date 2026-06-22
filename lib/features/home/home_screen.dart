@@ -14,7 +14,6 @@ import '../../shared/models/spot_status.dart';
 import '../../shared/models/treatment_type.dart';
 import '../../shared/photo/add_photo_flow.dart';
 import '../../shared/widgets/douji_shell.dart';
-import '../check_in/check_in_detail_dialog.dart';
 import '../face_map/add_spot_dialog.dart';
 import 'spot_detail_dialog.dart';
 
@@ -649,13 +648,12 @@ class _TimelineListItem extends ConsumerWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: photoPath != null
-            ? () => showCheckInDetailDialog(
-                context,
-                ref,
-                checkInId: item.checkIn.id,
-              )
-            : null,
+        onTap: () => showSpotDetailDialog(
+          context,
+          ref,
+          initialSpotId: item.checkIn.spotId,
+          initialCheckInId: item.checkIn.id,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
