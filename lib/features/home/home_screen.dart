@@ -72,13 +72,15 @@ class HomeScreen extends ConsumerWidget {
           title: '我的痘痘',
           subtitle: '记录每次变化，看到真实进展',
           showHeader: !isDesktop,
-          actions: [
-            FilledButton.icon(
-              onPressed: () => _addSpotFromHome(context, ref),
-              icon: const Icon(Icons.add),
-              label: const Text('新增痘痘'),
-            ),
-          ],
+          actions: isDesktop
+              ? const <Widget>[]
+              : [
+                  FilledButton.icon(
+                    onPressed: () => _addSpotFromHome(context, ref),
+                    icon: const Icon(Icons.add),
+                    label: const Text('新增痘痘'),
+                  ),
+                ],
           rightPanel: isDesktop
               ? _SpotDetailPanel(spot: selectedSpot, allSpots: spots)
               : null,
@@ -431,6 +433,42 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
     }
   }
 
+  Future<void> _deleteSpot(AcneSpot spot) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除痘痘'),
+        content: const Text('将删除该痘痘的所有打卡记录和照片，此操作不可撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    try {
+      await ref.read(spotRepositoryProvider).deleteSpot(spot.id);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('痘痘已删除')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('删除失败: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final spot = widget.spot;
@@ -514,6 +552,12 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
               ),
             ),
             const SizedBox(width: 12),
+            IconButton(
+              onPressed: () => _deleteSpot(spot),
+              tooltip: '删除痘痘',
+              icon: const Icon(Icons.delete_outline),
+              color: Colors.red.shade400,
+            ),
             FilledButton.icon(
               onPressed: () => showAddPhotoOptions(context, spot.id),
               icon: const Icon(Icons.camera_alt_outlined),
