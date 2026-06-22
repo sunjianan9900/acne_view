@@ -278,6 +278,12 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
+    expect(find.byType(TextField), findsOneWidget);
+
+    await tester.tap(find.byTooltip('编辑标题'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
     expect(find.byType(TextField), findsNWidgets(2));
 
     final titleField = find.widgetWithText(TextField, '首页标题测试');
@@ -286,6 +292,8 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(TextField), findsOneWidget);
 
     expect(repo.lastUpdatedSpotId, 'spot-home-1');
     expect(repo.lastUpdatedTitle, '更新后的标题');

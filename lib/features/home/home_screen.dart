@@ -15,6 +15,7 @@ import '../../shared/models/spot_status.dart';
 import '../../shared/models/treatment_type.dart';
 import '../../shared/photo/add_photo_flow.dart';
 import '../../shared/widgets/douji_shell.dart';
+import '../../shared/widgets/fireworks_overlay.dart';
 import '../face_map/add_spot_dialog.dart';
 import '../face_map/widgets/spot_face_map_widget.dart';
 import 'spot_detail_dialog.dart';
@@ -259,7 +260,20 @@ class _SpotListTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final thumbnail = ref.watch(spotThumbnailProvider(spot.id));
+    final timeline = ref.watch(spotTimelineProvider(spot.id));
+    final allPhases = ref.watch(allPhasesProvider);
     final dateFormat = DateFormat('yyyy-MM-dd');
+    final status = SpotStatus.fromId(spot.status);
+    final phaseBadge = _phaseBadgeLabel(
+      status: status,
+      timeline: timeline,
+      allPhases: allPhases,
+    );
+    final phaseColor = _phaseBadgeColor(
+      status: status,
+      timeline: timeline,
+      allPhases: allPhases,
+    );
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
@@ -290,13 +304,23 @@ class _SpotListTile extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    spotDisplayTitle(spot),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          spotDisplayTitle(spot),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (phaseBadge != null) ...[
+                        const SizedBox(width: 8),
+                        _PhaseBadge(label: phaseBadge, color: phaseColor),
+                      ],
+                    ],
                   ),
                   Text(
                     '区域 ${spotRegionLabel(spot)} · ${dateFormat.format(spot.createdAt)}',
@@ -308,6 +332,65 @@ class _SpotListTile extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  String? _phaseBadgeLabel({
+    required SpotStatus status,
+    required AsyncValue<List<SpotCheckInPhoto>> timeline,
+    required List<PhaseInfo> allPhases,
+  }) {
+    if (status == SpotStatus.concluded) return '收官';
+    return timeline.maybeWhen(
+      data: (items) {
+        if (items.isEmpty) return null;
+        final phase = findPhaseInfo(items.first.checkIn.phase, allPhases);
+        return phase?.label;
+      },
+      orElse: () => null,
+    );
+  }
+
+  Color _phaseBadgeColor({
+    required SpotStatus status,
+    required AsyncValue<List<SpotCheckInPhoto>> timeline,
+    required List<PhaseInfo> allPhases,
+  }) {
+    if (status == SpotStatus.concluded) return AppTheme.primaryTeal;
+    return timeline.maybeWhen(
+      data: (items) {
+        if (items.isEmpty) return AppTheme.textSecondary;
+        final phase = findPhaseInfo(items.first.checkIn.phase, allPhases);
+        return phase?.color ?? AppTheme.textSecondary;
+      },
+      orElse: () => AppTheme.textSecondary,
+    );
+  }
+}
+
+class _PhaseBadge extends StatelessWidget {
+  const _PhaseBadge({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 11,
         ),
       ),
     );
@@ -394,6 +477,8 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
   late final TextEditingController _noteController;
   late final FocusNode _titleFocusNode;
   bool _savingNote = false;
+  bool _concludingSpot = false;
+  bool _editingTitle = false;
 
   @override
   void initState() {
@@ -405,9 +490,22 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
   }
 
   void _onTitleFocusChange() {
-    if (!_titleFocusNode.hasFocus) {
-      _saveTitle();
+    if (!_titleFocusNode.hasFocus && _editingTitle) {
+      _finishTitleEdit();
     }
+  }
+
+  void _startTitleEdit() {
+    _titleController.text = widget.spot?.title ?? '';
+    setState(() => _editingTitle = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _titleFocusNode.requestFocus();
+    });
+  }
+
+  Future<void> _finishTitleEdit() async {
+    await _saveTitle();
+    if (mounted) setState(() => _editingTitle = false);
   }
 
   @override
@@ -423,6 +521,7 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
       }
       _titleController.text = widget.spot?.title ?? '';
       _noteController.text = widget.spot?.note ?? '';
+      _editingTitle = false;
     } else if (!_titleFocusNode.hasFocus &&
         oldWidget.spot?.title != widget.spot?.title) {
       _titleController.text = widget.spot?.title ?? '';
@@ -432,7 +531,7 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
   @override
   void dispose() {
     final spot = widget.spot;
-    if (spot != null) {
+    if (spot != null && _editingTitle) {
       final pendingTitle = _titleController.text.trim();
       if (pendingTitle != spot.title.trim()) {
         _persistTitle(spot.id, pendingTitle);
@@ -486,6 +585,33 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
       }
     } finally {
       if (mounted) setState(() => _savingNote = false);
+    }
+  }
+
+  Future<void> _concludeSpot(AcneSpot spot) async {
+    if (_concludingSpot) return;
+
+    setState(() => _concludingSpot = true);
+    try {
+      await showFireworksCelebration(context);
+      if (!mounted) return;
+
+      await ref
+          .read(spotRepositoryProvider)
+          .updateSpotStatus(spot.id, SpotStatus.concluded);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('恭喜！这颗痘痘已完美收官')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('收官失败: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _concludingSpot = false);
     }
   }
 
@@ -554,14 +680,15 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
           final phase = findPhaseInfo(items.first.checkIn.phase, allPhases);
           if (phase != null) return phase.color;
         }
-        return status == SpotStatus.active
+        return status.isActive
             ? AppTheme.accentCoral
             : AppTheme.primaryTeal;
       },
-      orElse: () => status == SpotStatus.active
+      orElse: () => status.isActive
           ? AppTheme.accentCoral
           : AppTheme.primaryTeal,
     );
+    final isActive = status.isActive;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -572,28 +699,50 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    controller: _titleController,
-                    focusNode: _titleFocusNode,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: spotRegionLabel(spot),
-                      hintStyle: Theme.of(context).textTheme.titleLarge
-                          ?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textSecondary.withValues(
-                              alpha: 0.55,
-                            ),
+                  _editingTitle
+                      ? TextField(
+                          controller: _titleController,
+                          focusNode: _titleFocusNode,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          decoration: InputDecoration(
+                            hintText: spotRegionLabel(spot),
+                            hintStyle: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.textSecondary.withValues(
+                                    alpha: 0.55,
+                                  ),
+                                ),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
                           ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _saveTitle(),
-                  ),
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _finishTitleEdit(),
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                spotDisplayTitle(spot),
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: _startTitleEdit,
+                              tooltip: '编辑标题',
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              color: AppTheme.textSecondary,
+                            ),
+                          ],
+                        ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 10,
@@ -656,6 +805,22 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
           ),
         ),
         const SizedBox(height: 10),
+        if (isActive)
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: _concludingSpot ? null : () => _concludeSpot(spot),
+              icon: _concludingSpot
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.celebration_outlined),
+              label: const Text('完美收官'),
+            ),
+          ),
+        if (isActive) const SizedBox(height: 10),
         Align(
           alignment: Alignment.centerRight,
           child: FilledButton(
