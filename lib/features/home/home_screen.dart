@@ -14,8 +14,8 @@ import '../../shared/models/spot_display.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/models/treatment_type.dart';
 import '../../shared/photo/add_photo_flow.dart';
+import '../../shared/widgets/confetti_celebration.dart';
 import '../../shared/widgets/douji_shell.dart';
-import '../../shared/widgets/fireworks_overlay.dart';
 import '../face_map/add_spot_dialog.dart';
 import '../face_map/widgets/spot_face_map_widget.dart';
 import 'spot_detail_dialog.dart';
@@ -593,22 +593,52 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
 
     setState(() => _concludingSpot = true);
     try {
-      await showFireworksCelebration(context);
-      if (!mounted) return;
-
       await ref
           .read(spotRepositoryProvider)
           .updateSpotStatus(spot.id, SpotStatus.concluded);
+      if (!mounted) return;
+
+      await showConfettiCelebration(context);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('恭喜！这颗痘痘已完美收官'),
+          action: SnackBarAction(
+            label: '撤销',
+            onPressed: () => _revertConclusion(spot.id),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('收官失败: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _concludingSpot = false);
+    }
+  }
+
+  Future<void> _revertConclusion(String spotId) async {
+    if (_concludingSpot) return;
+
+    setState(() => _concludingSpot = true);
+    try {
+      await ref
+          .read(spotRepositoryProvider)
+          .updateSpotStatus(spotId, SpotStatus.active);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('恭喜！这颗痘痘已完美收官')),
+          const SnackBar(content: Text('已撤销收官，继续追踪这颗痘痘')),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('收官失败: $e')));
+        ).showSnackBar(SnackBar(content: Text('撤销失败: $e')));
       }
     } finally {
       if (mounted) setState(() => _concludingSpot = false);
@@ -693,6 +723,7 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
           : AppTheme.primaryTeal,
     );
     final isActive = status.isActive;
+    final isConcluded = status == SpotStatus.concluded;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -824,7 +855,24 @@ class _SpotDetailPanelState extends ConsumerState<_SpotDetailPanel> {
               label: const Text('完美收官'),
             ),
           ),
-        if (isActive) const SizedBox(height: 10),
+        if (isConcluded)
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: _concludingSpot
+                  ? null
+                  : () => _revertConclusion(spot.id),
+              icon: _concludingSpot
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.undo_rounded),
+              label: const Text('撤销收官'),
+            ),
+          ),
+        if (isActive || isConcluded) const SizedBox(height: 10),
         Align(
           alignment: Alignment.centerRight,
           child: FilledButton(
