@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -32,6 +32,17 @@ Future<void> _addSpotFromHome(BuildContext context, WidgetRef ref) async {
 
 void _homeLog(String message) {
   debugPrint('[HomeScreen] $message');
+}
+
+DateTime _spotListDisplayDate(
+  AcneSpot spot,
+  AsyncValue<List<SpotCheckInPhoto>> timeline,
+) {
+  return timeline.maybeWhen(
+    data: (items) =>
+        items.isNotEmpty ? items.first.checkIn.checkInDate : spot.createdAt,
+    orElse: () => spot.createdAt,
+  );
 }
 
 class HomeScreen extends ConsumerWidget {
@@ -69,26 +80,31 @@ class HomeScreen extends ConsumerWidget {
         }
 
         final isDesktop = MediaQuery.of(context).size.width >= 1080;
-        return DoujiShell(
-          title: '我的痘痘',
-          subtitle: '记录每次变化，看到真实进展',
-          showHeader: !isDesktop,
-          actions: isDesktop
-              ? const <Widget>[]
-              : [
-                  FilledButton.icon(
-                    onPressed: () => _addSpotFromHome(context, ref),
-                    icon: const Icon(Icons.add),
-                    label: const Text('新增痘痘'),
-                  ),
-                ],
-          rightPanel: isDesktop
-              ? _SpotDetailPanel(spot: selectedSpot)
-              : null,
-          child: HomeBody(
-            spots: spots,
-            selectedSpot: selectedSpot,
-            isDesktop: isDesktop,
+        return _HomeKeyboardShortcuts(
+          spots: spots,
+          selectedSpot: selectedSpot,
+          enabled: isDesktop,
+          child: DoujiShell(
+            title: '我的痘痘',
+            subtitle: '记录每次变化，看到真实进展',
+            showHeader: !isDesktop,
+            actions: isDesktop
+                ? const <Widget>[]
+                : [
+                    FilledButton.icon(
+                      onPressed: () => _addSpotFromHome(context, ref),
+                      icon: const Icon(Icons.add),
+                      label: const Text('新增痘痘'),
+                    ),
+                  ],
+            rightPanel: isDesktop
+                ? _SpotDetailPanel(spot: selectedSpot)
+                : null,
+            child: HomeBody(
+              spots: spots,
+              selectedSpot: selectedSpot,
+              isDesktop: isDesktop,
+            ),
           ),
         );
       },
@@ -150,18 +166,28 @@ class HomeBody extends ConsumerWidget {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 250,
-            child: _SpotListPanel(spots: spots, selectedSpot: spot),
-          ),
-          const VerticalDivider(width: 1, color: AppTheme.panelBorder),
-          const SizedBox(width: 20),
-          Expanded(
-            child: spot == null
-                ? const _EmptySpotDetail()
-                : _SpotTimelinePanel(spot: spot),
-          ),
-        ],
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 20, 0),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 320),
+                    child: _SpotListPanel(spots: spots, selectedSpot: spot),
+                  ),
+                ),
+              ),
+            ),
+            const VerticalDivider(width: 1, color: AppTheme.panelBorder),
+            const SizedBox(width: 20),
+            Expanded(
+              flex: 3,
+              child: spot == null
+                  ? const _EmptySpotDetail()
+                  : _SpotTimelinePanel(spot: spot),
+            ),
+          ],
       );
     }
 
@@ -169,24 +195,115 @@ class HomeBody extends ConsumerWidget {
       itemCount: spots.length,
       separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        final spot = spots[index];
-        return ListTile(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: AppTheme.panelBorder),
-          ),
-          title: Text(spotDisplayTitle(spot)),
-          subtitle: Text(
-            '区域 ${spotRegionLabel(spot)} · ${DateFormat('yyyy-MM-dd').format(spot.createdAt)}',
-          ),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => showSpotDetailDialog(
-            context,
-            ref,
-            initialSpotId: spot.id,
-          ),
-        );
+        return _MobileSpotListTile(spot: spots[index]);
       },
+    );
+  }
+}
+
+class _HomeKeyboardShortcuts extends ConsumerWidget {
+  const _HomeKeyboardShortcuts({
+    required this.spots,
+    required this.selectedSpot,
+    required this.enabled,
+    required this.child,
+  });
+
+  final List<AcneSpot> spots;
+  final AcneSpot? selectedSpot;
+  final bool enabled;
+  final Widget child;
+
+  static bool _isEditingText() {
+    final focusContext = FocusManager.instance.primaryFocus?.context;
+    if (focusContext == null) return false;
+    return focusContext.findAncestorWidgetOfExactType<EditableText>() != null;
+  }
+
+  void _selectAdjacentSpot(WidgetRef ref, int delta) {
+    if (spots.isEmpty) return;
+
+    final currentId = selectedSpot?.id;
+    var index = currentId == null
+        ? 0
+        : spots.indexWhere((spot) => spot.id == currentId);
+    if (index < 0) index = 0;
+
+    final nextIndex = (index + delta).clamp(0, spots.length - 1);
+    if (nextIndex == index) return;
+
+    ref.read(selectedHomeSpotIdProvider.notifier).state = spots[nextIndex].id;
+  }
+
+  Future<void> _openLatestCheckIn(BuildContext context, WidgetRef ref) async {
+    final spot = selectedSpot;
+    if (spot == null) return;
+
+    final timeline = await ref.read(spotTimelineProvider(spot.id).future);
+    if (!context.mounted) return;
+
+    await showSpotDetailDialog(
+      context,
+      ref,
+      initialSpotId: spot.id,
+      initialCheckInId: timeline.isNotEmpty ? timeline.first.checkIn.id : null,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!enabled) return child;
+
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (_isEditingText()) return KeyEventResult.ignored;
+
+        switch (event.logicalKey) {
+          case LogicalKeyboardKey.arrowUp:
+            _selectAdjacentSpot(ref, -1);
+            return KeyEventResult.handled;
+          case LogicalKeyboardKey.arrowDown:
+            _selectAdjacentSpot(ref, 1);
+            return KeyEventResult.handled;
+          case LogicalKeyboardKey.space:
+            _openLatestCheckIn(context, ref);
+            return KeyEventResult.handled;
+          default:
+            return KeyEventResult.ignored;
+        }
+      },
+      child: child,
+    );
+  }
+}
+
+class _MobileSpotListTile extends ConsumerWidget {
+  const _MobileSpotListTile({required this.spot});
+
+  final AcneSpot spot;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timeline = ref.watch(spotTimelineProvider(spot.id));
+    final displayDate = _spotListDisplayDate(spot, timeline);
+
+    return ListTile(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppTheme.panelBorder),
+      ),
+      title: Text(spotDisplayTitle(spot)),
+      subtitle: Text(
+        '区域 ${spotRegionLabel(spot)} · ${DateFormat('yyyy-MM-dd').format(displayDate)}',
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => showSpotDetailDialog(
+        context,
+        ref,
+        initialSpotId: spot.id,
+      ),
     );
   }
 }
@@ -274,6 +391,7 @@ class _SpotListTile extends ConsumerWidget {
       timeline: timeline,
       allPhases: allPhases,
     );
+    final displayDate = _spotListDisplayDate(spot, timeline);
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
@@ -323,7 +441,7 @@ class _SpotListTile extends ConsumerWidget {
                     ],
                   ),
                   Text(
-                    '区域 ${spotRegionLabel(spot)} · ${dateFormat.format(spot.createdAt)}',
+                    '区域 ${spotRegionLabel(spot)} · ${dateFormat.format(displayDate)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.textSecondary,
                     ),

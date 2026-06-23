@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/theme/app_theme.dart';
+import 'shared/widgets/app_escape_handler.dart';
 
 import '../features/acne_education/acne_education_screen.dart';
 import '../features/capture/capture_screen.dart';
@@ -11,6 +12,7 @@ import '../features/face_map/region_spots_screen.dart';
 import '../features/help/help_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/preview/live_preview_screen.dart';
+import '../features/settings/settings_screen.dart';
 import '../features/tag_management/tag_management_screen.dart';
 import '../features/timeline/timeline_screen.dart';
 import 'shared/models/photo_source.dart';
@@ -56,6 +58,12 @@ final router = GoRouter(
           path: '/live-preview',
           pageBuilder: (context, state) => const NoTransitionPage(
             child: LivePreviewScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/settings',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: SettingsScreen(),
           ),
         ),
         GoRoute(
@@ -116,6 +124,13 @@ class DoujiApp extends StatelessWidget {
       theme: AppTheme.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return AppEscapeHandler(
+          router: router,
+          rootNavigatorKey: _rootNavigatorKey,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }
