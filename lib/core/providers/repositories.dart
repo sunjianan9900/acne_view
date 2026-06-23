@@ -265,6 +265,87 @@ class CheckInRepository {
     }
     await _db.deleteCheckIn(checkInId);
   }
+
+  Future<List<CheckInWithSpot>> getCheckInsInRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final rows = await _db.getCheckInsInRange(start, end);
+    return [
+      for (final (checkIn, spot) in rows)
+        CheckInWithSpot(checkIn: checkIn, spot: spot),
+    ];
+  }
+
+  Stream<List<CheckInWithSpot>> watchCheckInsInRange(
+    DateTime start,
+    DateTime end,
+  ) {
+    return _db.watchCheckInsInRange(start, end).map(
+      (rows) => [
+        for (final (checkIn, spot) in rows)
+          CheckInWithSpot(checkIn: checkIn, spot: spot),
+      ],
+    );
+  }
+
+  Future<List<CheckInWithSpot>> getCheckInsForDay(DateTime day) async {
+    final rows = await _db.getCheckInsForDay(day);
+    return [
+      for (final (checkIn, spot) in rows)
+        CheckInWithSpot(checkIn: checkIn, spot: spot),
+    ];
+  }
+}
+
+class DiaryRepository {
+  DiaryRepository(this._db);
+
+  final AppDatabase _db;
+
+  Stream<List<DiaryEntry>> watchAllEntries() => _db.watchDiaryEntries();
+
+  Future<DiaryEntry?> getEntry(String id) => _db.getDiaryEntry(id);
+
+  Future<String> createEntry({
+    required DateTime entryDate,
+    required String content,
+  }) async {
+    final id = _uuid.v4();
+    final now = DateTime.now();
+    final normalizedDate = DateTime(entryDate.year, entryDate.month, entryDate.day);
+    await _db.insertDiaryEntry(
+      DiaryEntriesCompanion.insert(
+        id: id,
+        entryDate: normalizedDate,
+        content: Value(content.trim()),
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    return id;
+  }
+
+  Future<void> updateEntry({
+    required String id,
+    required DateTime entryDate,
+    required String content,
+  }) async {
+    final existing = await _db.getDiaryEntry(id);
+    if (existing == null) return;
+    final normalizedDate = DateTime(entryDate.year, entryDate.month, entryDate.day);
+    await _db.updateDiaryEntry(
+      DiaryEntriesCompanion(
+        id: Value(id),
+        entryDate: Value(normalizedDate),
+        content: Value(content.trim()),
+        createdAt: Value(existing.createdAt),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> deleteEntry(String id) => _db.deleteDiaryEntry(id);
 }
 
 class TreatmentEntry {
@@ -299,12 +380,23 @@ class CheckInDetail {
   final List<TreatmentItem> treatments;
 }
 
+class CheckInWithSpot {
+  const CheckInWithSpot({required this.checkIn, required this.spot});
+
+  final CheckInRecord checkIn;
+  final AcneSpot spot;
+}
+
 final spotRepositoryProvider = Provider<AcneSpotRepository>((ref) {
   return AcneSpotRepository(ref.watch(databaseProvider));
 });
 
 final checkInRepositoryProvider = Provider<CheckInRepository>((ref) {
   return CheckInRepository(ref.watch(databaseProvider));
+});
+
+final diaryRepositoryProvider = Provider<DiaryRepository>((ref) {
+  return DiaryRepository(ref.watch(databaseProvider));
 });
 
 final activeSpotCountProvider = StreamProvider<int>((ref) {
@@ -375,4 +467,27 @@ final checkInDetailProvider = FutureProvider.family<CheckInDetail?, String>((
   checkInId,
 ) {
   return ref.watch(checkInRepositoryProvider).getCheckInDetail(checkInId);
+});
+
+DateTime _monthKey(DateTime month) => DateTime(month.year, month.month);
+
+(DateTime, DateTime) _monthRange(DateTime month) {
+  final start = DateTime(month.year, month.month);
+  final end = DateTime(month.year, month.month + 1);
+  return (start, end);
+}
+
+final calendarFocusedMonthProvider = StateProvider<DateTime>((ref) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month);
+});
+
+final monthCheckInsProvider =
+    StreamProvider.family<List<CheckInWithSpot>, DateTime>((ref, month) {
+      final (start, end) = _monthRange(_monthKey(month));
+      return ref.watch(checkInRepositoryProvider).watchCheckInsInRange(start, end);
+    });
+
+final diaryEntriesProvider = StreamProvider<List<DiaryEntry>>((ref) {
+  return ref.watch(diaryRepositoryProvider).watchAllEntries();
 });

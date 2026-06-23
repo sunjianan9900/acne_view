@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
 import 'shared/widgets/app_escape_handler.dart';
 
+import '../features/calendar/calendar_screen.dart';
 import '../features/acne_education/acne_education_screen.dart';
 import '../features/capture/capture_screen.dart';
 import '../features/check_in/check_in_screen.dart';
@@ -34,6 +35,12 @@ final router = GoRouter(
           path: '/',
           pageBuilder: (context, state) => const NoTransitionPage(
             child: HomeScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/calendar',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: CalendarScreen(),
           ),
         ),
         GoRoute(

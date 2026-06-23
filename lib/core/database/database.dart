@@ -10,12 +10,19 @@ import '../../shared/face_map/face_map_coordinates.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [AcneSpots, SpotFaceMarkers, CheckInRecords, TreatmentItems, Photos])
+@DriftDatabase(tables: [
+  AcneSpots,
+  SpotFaceMarkers,
+  CheckInRecords,
+  TreatmentItems,
+  Photos,
+  DiaryEntries,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -67,6 +74,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 7) {
         await migrator.addColumn(spotFaceMarkers, spotFaceMarkers.size);
+      }
+      if (from < 8) {
+        await migrator.createTable(diaryEntries);
       }
     },
   );
@@ -240,6 +250,47 @@ class AppDatabase extends _$AppDatabase {
     return row.read(checkInRecords.id.count()) ?? 0;
   }
 
+  Future<List<(CheckInRecord, AcneSpot)>> getCheckInsInRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final query = select(checkInRecords).join([
+      innerJoin(acneSpots, acneSpots.id.equalsExp(checkInRecords.spotId)),
+    ])
+      ..where(checkInRecords.checkInDate.isBiggerOrEqualValue(start))
+      ..where(checkInRecords.checkInDate.isSmallerThanValue(end))
+      ..orderBy([OrderingTerm.desc(checkInRecords.checkInDate)]);
+    final rows = await query.get();
+    return [
+      for (final row in rows)
+        (row.readTable(checkInRecords), row.readTable(acneSpots)),
+    ];
+  }
+
+  Stream<List<(CheckInRecord, AcneSpot)>> watchCheckInsInRange(
+    DateTime start,
+    DateTime end,
+  ) {
+    final query = select(checkInRecords).join([
+      innerJoin(acneSpots, acneSpots.id.equalsExp(checkInRecords.spotId)),
+    ])
+      ..where(checkInRecords.checkInDate.isBiggerOrEqualValue(start))
+      ..where(checkInRecords.checkInDate.isSmallerThanValue(end))
+      ..orderBy([OrderingTerm.desc(checkInRecords.checkInDate)]);
+    return query.watch().map(
+      (rows) => [
+        for (final row in rows)
+          (row.readTable(checkInRecords), row.readTable(acneSpots)),
+      ],
+    );
+  }
+
+  Future<List<(CheckInRecord, AcneSpot)>> getCheckInsForDay(DateTime day) {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+    return getCheckInsInRange(start, end);
+  }
+
   Future<int> insertCheckIn(CheckInRecordsCompanion record) {
     return into(checkInRecords).insert(record);
   }
@@ -299,6 +350,31 @@ class AppDatabase extends _$AppDatabase {
     return (update(photos)..where((t) => t.checkInId.equals(checkInId))).write(
       PhotosCompanion(capturedAt: Value(capturedAt)),
     );
+  }
+
+  // --- Diary ---
+
+  Stream<List<DiaryEntry>> watchDiaryEntries() {
+    return (select(diaryEntries)
+          ..orderBy([(t) => OrderingTerm.desc(t.entryDate)]))
+        .watch();
+  }
+
+  Future<DiaryEntry?> getDiaryEntry(String id) {
+    return (select(diaryEntries)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+  }
+
+  Future<int> insertDiaryEntry(DiaryEntriesCompanion entry) {
+    return into(diaryEntries).insert(entry);
+  }
+
+  Future<bool> updateDiaryEntry(DiaryEntriesCompanion entry) {
+    return update(diaryEntries).replace(entry);
+  }
+
+  Future<int> deleteDiaryEntry(String id) {
+    return (delete(diaryEntries)..where((t) => t.id.equals(id))).go();
   }
 }
 
