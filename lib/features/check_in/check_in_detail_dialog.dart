@@ -168,10 +168,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
       ref.invalidate(checkInDetailProvider(widget.checkInId));
       ref.invalidate(spotTimelineProvider(detail.checkIn.spotId));
       if (mounted) {
-        setState(() {
-          _editing = false;
-          _formReady = false;
-        });
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('记录已更新')));
@@ -339,7 +336,7 @@ class _CheckInDetailDialogState extends ConsumerState<CheckInDetailDialog> {
         ),
         if (_editing)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
             child: Row(
               children: [
                 Expanded(
