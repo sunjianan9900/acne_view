@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/backup/backup_provider.dart';
-import '../../core/photo/photo_flip_migration_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/douji_shell.dart';
 
@@ -20,8 +19,6 @@ class SettingsScreen extends ConsumerWidget {
         padding: EdgeInsets.zero,
         children: const [
           _DataBackupSection(),
-          SizedBox(height: 16),
-          _PhotoFlipMigrationSection(),
         ],
       ),
     );
@@ -222,190 +219,6 @@ class _DataBackupSectionState extends ConsumerState<_DataBackupSection> {
                 label: const Text('导入恢复'),
               ),
             ],
-          ),
-          if (_statusMessage != null) ...[
-            const SizedBox(height: 14),
-            Text(
-              _statusMessage!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: _statusIsError
-                    ? Theme.of(context).colorScheme.error
-                    : AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PhotoFlipMigrationSection extends ConsumerStatefulWidget {
-  const _PhotoFlipMigrationSection();
-
-  @override
-  ConsumerState<_PhotoFlipMigrationSection> createState() =>
-      _PhotoFlipMigrationSectionState();
-}
-
-class _PhotoFlipMigrationSectionState
-    extends ConsumerState<_PhotoFlipMigrationSection> {
-  bool _busy = false;
-  String? _statusMessage;
-  bool _statusIsError = false;
-
-  Future<void> _runMigration() async {
-    if (_busy) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('翻转历史相机照片'),
-        content: const Text(
-          '将把此前通过内置/外接摄像头拍摄并已保存的照片左右翻转，使其与当前取景预览方向一致。\n\n'
-          '相册上传的照片不会处理。此操作只能执行一次，且会直接覆盖原图文件，建议先导出备份。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('开始处理'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    setState(() {
-      _busy = true;
-      _statusMessage = null;
-    });
-
-    try {
-      final service = ref.read(photoFlipMigrationServiceProvider);
-      final result = await service.migrateCameraPhotos();
-      if (!mounted) return;
-
-      if (result.alreadyDone) {
-        setState(() {
-          _statusMessage = '历史照片已处理过，无需重复操作';
-          _statusIsError = false;
-        });
-      } else {
-        setState(() {
-          _statusMessage =
-              '已翻转 ${result.flipped} 张相机照片'
-              '${result.skipped > 0 ? '，${result.skipped} 张跳过' : ''}';
-          _statusIsError = false;
-        });
-      }
-      ref.invalidate(photoFlipMigrationDoneProvider);
-      invalidateDataProviders(ref);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _statusMessage = '处理失败：$error';
-        _statusIsError = true;
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final migrationDone = ref.watch(photoFlipMigrationDoneProvider);
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.softBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.panelBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppTheme.softRose,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.flip_outlined,
-                  size: 18,
-                  color: AppTheme.brandPink,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '历史照片方向校正',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '一次性翻转此前相机拍摄的照片，使其与取景预览左右一致（相册照片不受影响）',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          migrationDone.when(
-            data: (done) {
-              if (done) {
-                return Text(
-                  '历史相机照片已校正完成',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
-                );
-              }
-              return OutlinedButton.icon(
-                onPressed: _busy ? null : _runMigration,
-                icon: _busy
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.flip_outlined, size: 18),
-                label: const Text('翻转历史相机照片'),
-              );
-            },
-            loading: () => const SizedBox(
-              height: 36,
-              child: Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            ),
-            error: (_, _) => OutlinedButton.icon(
-              onPressed: _busy ? null : _runMigration,
-              icon: const Icon(Icons.flip_outlined, size: 18),
-              label: const Text('翻转历史相机照片'),
-            ),
           ),
           if (_statusMessage != null) ...[
             const SizedBox(height: 14),
