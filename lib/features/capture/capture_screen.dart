@@ -184,13 +184,6 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           title: const Text('拍摄痘痘'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.photo_library_outlined),
-              tooltip: '从相册选择',
-              onPressed: () => pickImageAndCheckIn(context, widget.spotId),
-            ),
-          ],
         ),
         body: _error != null
             ? Center(
@@ -273,9 +266,22 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         Padding(
           padding: const EdgeInsets.all(24),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    onPressed: _initializing
+                        ? null
+                        : () => pickImageAndCheckIn(context, widget.spotId),
+                    icon: const Icon(Icons.photo_library_outlined),
+                    color: Colors.white,
+                    iconSize: 32,
+                    tooltip: '从相册选择',
+                  ),
+                ),
+              ),
               GestureDetector(
                 onTap: _initializing ? null : _takePicture,
                 child: Container(
@@ -294,18 +300,22 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                   ),
                 ),
               ),
-              if (_devices.isNotEmpty) ...[
-                const SizedBox(width: 16),
-                CameraDeviceDropdown(
-                  devices: _devices,
-                  selectedId: camera.currentDevice?.id,
-                  enabled: !_initializing,
-                  darkStyle: true,
-                  width: 260,
-                  compact: true,
-                  onChanged: _selectDevice,
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _devices.isNotEmpty
+                      ? CameraDeviceDropdown(
+                          devices: _devices,
+                          selectedId: camera.currentDevice?.id,
+                          enabled: !_initializing,
+                          darkStyle: true,
+                          width: 260,
+                          compact: true,
+                          onChanged: _selectDevice,
+                        )
+                      : const SizedBox.shrink(),
                 ),
-              ],
+              ),
             ],
           ),
         ),
