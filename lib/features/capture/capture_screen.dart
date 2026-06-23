@@ -248,21 +248,11 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
               ? const SizedBox.shrink()
               : CapturePreviewFrame(camera: camera),
         ),
-        if (_devices.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: CameraDeviceDropdown(
-              devices: _devices,
-              selectedId: camera.currentDevice?.id,
-              enabled: !_initializing,
-              darkStyle: true,
-              onChanged: _selectDevice,
-            ),
-          ),
         Padding(
           padding: const EdgeInsets.all(24),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               GestureDetector(
                 onTap: _initializing ? null : _takePicture,
@@ -282,6 +272,18 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                   ),
                 ),
               ),
+              if (_devices.isNotEmpty) ...[
+                const SizedBox(width: 16),
+                CameraDeviceDropdown(
+                  devices: _devices,
+                  selectedId: camera.currentDevice?.id,
+                  enabled: !_initializing,
+                  darkStyle: true,
+                  width: 260,
+                  compact: true,
+                  onChanged: _selectDevice,
+                ),
+              ],
             ],
           ),
         ),
