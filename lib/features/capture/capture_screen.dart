@@ -9,10 +9,12 @@ import '../../core/camera/camera_factory.dart';
 import '../../core/camera/camera_service.dart';
 import '../../core/camera/external_camera_service.dart';
 import '../../core/providers/camera_provider.dart';
+import '../../core/providers/repositories.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/photo/add_photo_flow.dart';
 import '../../shared/widgets/camera_device_dropdown.dart';
 import 'widgets/capture_viewport.dart';
+import 'widgets/last_photo_overlay.dart';
 
 class CaptureScreen extends ConsumerStatefulWidget {
   const CaptureScreen({super.key, required this.spotId});
@@ -27,6 +29,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   bool _initializing = true;
   String? _error;
   String? _capturedPath;
+  bool _referencePhotoDismissed = false;
   CameraService? _activeCamera;
   List<CameraDeviceInfo> _devices = [];
 
@@ -240,13 +243,32 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   }
 
   Widget _buildCamera(CameraService camera) {
+    final latestPhoto = ref.watch(spotThumbnailProvider(widget.spotId));
+    final referencePath = latestPhoto.maybeWhen(
+      data: (photo) => photo?.filePath,
+      orElse: () => null,
+    );
+    final showReferenceOverlay =
+        !_referencePhotoDismissed && referencePath != null;
+
     return Column(
       children: [
         CaptureViewport(
           loading: _initializing,
           child: _initializing
               ? const SizedBox.shrink()
-              : CapturePreviewFrame(camera: camera),
+              : Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CapturePreviewFrame(camera: camera),
+                    if (showReferenceOverlay)
+                      LastPhotoOverlay(
+                        photoPath: referencePath,
+                        onDismiss: () =>
+                            setState(() => _referencePhotoDismissed = true),
+                      ),
+                  ],
+                ),
         ),
         Padding(
           padding: const EdgeInsets.all(24),
