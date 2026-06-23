@@ -159,6 +159,16 @@ class _LivePreviewScreenState extends ConsumerState<LivePreviewScreen> {
       child: DoujiShell(
       title: '实时预览',
       subtitle: '实时显示摄像头画面，按空格键拍照后标记位置并新增痘痘',
+      titleTrailing: _devices.isEmpty
+          ? null
+          : CameraDeviceDropdown(
+              devices: _devices,
+              selectedId: camera.currentDevice?.id,
+              enabled: !_initializing && _error == null,
+              width: 300,
+              compact: true,
+              onChanged: _selectDevice,
+            ),
       actions: [
         FilledButton.icon(
           onPressed: _initializing || _error != null || _capturing
@@ -171,15 +181,6 @@ class _LivePreviewScreenState extends ConsumerState<LivePreviewScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_devices.isNotEmpty) ...[
-            CameraDeviceDropdown(
-              devices: _devices,
-              selectedId: camera.currentDevice?.id,
-              enabled: !_initializing && _error == null,
-              onChanged: _selectDevice,
-            ),
-            const SizedBox(height: 12),
-          ],
           Expanded(
             child: Container(
               decoration: BoxDecoration(

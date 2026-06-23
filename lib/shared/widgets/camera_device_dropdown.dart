@@ -12,6 +12,8 @@ class CameraDeviceDropdown extends StatelessWidget {
     required this.onChanged,
     this.enabled = true,
     this.darkStyle = false,
+    this.width,
+    this.compact = false,
   });
 
   final List<CameraDeviceInfo> devices;
@@ -19,6 +21,8 @@ class CameraDeviceDropdown extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final bool enabled;
   final bool darkStyle;
+  final double? width;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -37,21 +41,28 @@ class CameraDeviceDropdown extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.08)
         : AppTheme.softBackground;
 
-    return DecoratedBox(
+    final dropdown = DecoratedBox(
       decoration: BoxDecoration(
         color: fillColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(compact ? 10 : 12),
         border: Border.all(color: borderColor),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 10 : 12,
+          vertical: compact ? 2 : 0,
+        ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: effectiveId,
-            isExpanded: true,
-            icon: Icon(Icons.expand_more, color: hintColor, size: 20),
+            isExpanded: width != null,
+            isDense: compact,
+            icon: Icon(Icons.expand_more, color: hintColor, size: 18),
             dropdownColor: darkStyle ? const Color(0xFF1E1E1E) : Colors.white,
-            style: TextStyle(color: textColor, fontSize: 14),
+            style: TextStyle(
+              color: textColor,
+              fontSize: compact ? 13 : 14,
+            ),
             items: devices
                 .map(
                   (device) => DropdownMenuItem<String>(
@@ -86,5 +97,10 @@ class CameraDeviceDropdown extends StatelessWidget {
         ),
       ),
     );
+
+    if (width != null) {
+      return SizedBox(width: width, child: dropdown);
+    }
+    return dropdown;
   }
 }

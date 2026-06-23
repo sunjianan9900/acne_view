@@ -14,6 +14,7 @@ class DoujiShell extends StatelessWidget {
     this.rightPanel,
     this.actions = const <Widget>[],
     this.showHeader = true,
+    this.titleTrailing,
   });
 
   final String title;
@@ -22,6 +23,7 @@ class DoujiShell extends StatelessWidget {
   final Widget? rightPanel;
   final List<Widget> actions;
   final bool showHeader;
+  final Widget? titleTrailing;
 
   static const _navItems = <_NavItem>[
     _NavItem(label: '概览', icon: Icons.home_outlined, route: '/'),
@@ -38,7 +40,18 @@ class DoujiShell extends StatelessWidget {
     final isDesktop = MediaQuery.of(context).size.width >= 1080;
     if (!isDesktop) {
       return Scaffold(
-        appBar: AppBar(title: Text(title), actions: actions),
+        appBar: AppBar(
+          title: titleTrailing == null
+              ? Text(title)
+              : Row(
+                  children: [
+                    Text(title),
+                    const SizedBox(width: 8),
+                    Expanded(child: titleTrailing!),
+                  ],
+                ),
+          actions: actions,
+        ),
         body: SafeArea(
           child: Padding(padding: const EdgeInsets.all(16), child: child),
         ),
@@ -74,14 +87,24 @@ class DoujiShell extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      title,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          title,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                        ),
+                                        if (titleTrailing != null) ...[
+                                          const SizedBox(width: 12),
+                                          titleTrailing!,
+                                        ],
+                                      ],
                                     ),
                                     if (subtitle.isNotEmpty) ...[
                                       const SizedBox(height: 6),
