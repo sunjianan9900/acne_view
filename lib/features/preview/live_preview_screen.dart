@@ -8,6 +8,7 @@ import '../../core/camera/external_camera_service.dart';
 import '../../core/providers/camera_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/photo_source.dart';
+import '../../shared/widgets/camera_device_dropdown.dart';
 import '../../shared/widgets/douji_shell.dart';
 import '../face_map/quick_add_spot_sheet.dart';
 
@@ -24,6 +25,7 @@ class _LivePreviewScreenState extends ConsumerState<LivePreviewScreen> {
   String? _previewPath;
   bool _capturing = false;
   CameraService? _activeCamera;
+  List<CameraDeviceInfo> _devices = [];
 
   CameraService get _camera => _activeCamera ?? ref.read(cameraServiceProvider);
 
@@ -48,10 +50,12 @@ class _LivePreviewScreenState extends ConsumerState<LivePreviewScreen> {
     try {
       final camera = _camera;
       await camera.initialize();
+      final devices = await camera.listDevices();
       if (mounted) {
         setState(() {
           _initializing = false;
           _activeCamera = camera;
+          _devices = devices;
         });
       }
     } catch (e) {
@@ -60,10 +64,12 @@ class _LivePreviewScreenState extends ConsumerState<LivePreviewScreen> {
         try {
           final fallback = await createFallbackCameraService(primary);
           await fallback.initialize();
+          final devices = await fallback.listDevices();
           if (mounted) {
             setState(() {
               _initializing = false;
               _activeCamera = fallback;
+              _devices = devices;
               _error = null;
             });
           }
@@ -123,6 +129,27 @@ class _LivePreviewScreenState extends ConsumerState<LivePreviewScreen> {
     }
   }
 
+  Future<void> _selectDevice(String deviceId) async {
+    if (deviceId == _camera.currentDevice?.id) return;
+    setState(() => _initializing = true);
+    try {
+      await _camera.selectDevice(deviceId);
+      final devices = await _camera.listDevices();
+      if (mounted) {
+        setState(() {
+          _devices = devices;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _initializing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final camera = _camera;
@@ -131,7 +158,7 @@ class _LivePreviewScreenState extends ConsumerState<LivePreviewScreen> {
       onKeyEvent: _handleKeyEvent,
       child: DoujiShell(
       title: '实时预览',
-      subtitle: '实时显示摄像头画面，按空格键拍照后快速新增痘痘',
+      subtitle: '实时显示摄像头画面，按空格键拍照后标记位置并新增痘痘',
       actions: [
         FilledButton.icon(
           onPressed: _initializing || _error != null || _capturing
@@ -144,6 +171,15 @@ class _LivePreviewScreenState extends ConsumerState<LivePreviewScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (_devices.isNotEmpty) ...[
+            CameraDeviceDropdown(
+              devices: _devices,
+              selectedId: camera.currentDevice?.id,
+              enabled: !_initializing && _error == null,
+              onChanged: _selectDevice,
+            ),
+            const SizedBox(height: 12),
+          ],
           Expanded(
             child: Container(
               decoration: BoxDecoration(

@@ -20,22 +20,38 @@ class BuiltinCameraService implements CameraService {
     final cam = _cameras[_cameraIndex];
     return CameraDeviceInfo(
       id: cam.name,
-      name: cam.lensDirection == CameraLensDirection.front ? '前置摄像头' : '后置摄像头',
-      isExternal: false,
+      name: _deviceLabel(cam),
+      isExternal: cam.lensDirection == CameraLensDirection.external,
     );
+  }
+
+  String _deviceLabel(CameraDescription camera) {
+    final base = switch (camera.lensDirection) {
+      CameraLensDirection.front => '前置摄像头',
+      CameraLensDirection.back => '后置摄像头',
+      CameraLensDirection.external => '外接摄像头',
+    };
+    final sameDirection = _cameras
+        .where((c) => c.lensDirection == camera.lensDirection)
+        .toList();
+    if (sameDirection.length > 1) {
+      final order = sameDirection.indexOf(camera) + 1;
+      return '$base $order';
+    }
+    return base;
   }
 
   @override
   Future<List<CameraDeviceInfo>> listDevices() async {
     _cameras = await availableCameras();
     return _cameras
+        .asMap()
+        .entries
         .map(
-          (c) => CameraDeviceInfo(
-            id: c.name,
-            name: c.lensDirection == CameraLensDirection.front
-                ? '前置摄像头'
-                : '后置摄像头',
-            isExternal: false,
+          (entry) => CameraDeviceInfo(
+            id: entry.value.name,
+            name: _deviceLabel(entry.value),
+            isExternal: entry.value.lensDirection == CameraLensDirection.external,
           ),
         )
         .toList();
@@ -71,10 +87,15 @@ class BuiltinCameraService implements CameraService {
     await _controller!.initialize();
   }
 
+  @override
+  Future<void> selectDevice(String deviceId) async {
+    await initialize(preferredDeviceId: deviceId);
+  }
+
   Future<void> switchCamera() async {
     if (_cameras.length < 2) return;
     _cameraIndex = (_cameraIndex + 1) % _cameras.length;
-    await initialize(preferredDeviceId: _cameras[_cameraIndex].name);
+    await selectDevice(_cameras[_cameraIndex].name);
   }
 
   @override

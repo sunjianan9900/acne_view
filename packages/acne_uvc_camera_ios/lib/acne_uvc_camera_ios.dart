@@ -60,9 +60,13 @@ class AcneUvcCameraIos {
     return devices.any((d) => d.isExternal);
   }
 
-  static Future<int> initialize({bool preferExternal = true}) async {
+  static Future<int> initialize({
+    bool preferExternal = true,
+    String? deviceId,
+  }) async {
     final textureId = await _channel.invokeMethod<int>('initialize', {
       'preferExternal': preferExternal,
+      if (deviceId != null) 'deviceId': deviceId,
     });
     return textureId ?? -1;
   }
@@ -79,6 +83,13 @@ class AcneUvcCameraIos {
 
   static Future<void> switchCamera() async {
     await _channel.invokeMethod<void>('switchCamera');
+  }
+
+  static Future<int> selectDevice(String deviceId) async {
+    final textureId = await _channel.invokeMethod<int>('selectDevice', {
+      'deviceId': deviceId,
+    });
+    return textureId ?? -1;
   }
 
   static Stream<String> get connectionEvents {

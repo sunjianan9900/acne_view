@@ -44,7 +44,8 @@ public class AcneUvcCameraIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     case "initialize":
       let args = call.arguments as? [String: Any]
       let preferExternal = args?["preferExternal"] as? Bool ?? true
-      manager.initialize(preferExternal: preferExternal) { textureId, error in
+      let deviceId = args?["deviceId"] as? String
+      manager.initialize(preferExternal: preferExternal, deviceId: deviceId) { textureId, error in
         if let error = error {
           result(FlutterError(code: "init_failed", message: error.localizedDescription, details: nil))
         } else {
@@ -66,6 +67,19 @@ public class AcneUvcCameraIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
       manager.switchCamera { textureId, error in
         if let error = error {
           result(FlutterError(code: "switch_failed", message: error.localizedDescription, details: nil))
+        } else {
+          result(textureId)
+        }
+      }
+    case "selectDevice":
+      let args = call.arguments as? [String: Any]
+      guard let deviceId = args?["deviceId"] as? String else {
+        result(FlutterError(code: "invalid_args", message: "deviceId is required", details: nil))
+        return
+      }
+      manager.selectDevice(deviceId: deviceId) { textureId, error in
+        if let error = error {
+          result(FlutterError(code: "select_failed", message: error.localizedDescription, details: nil))
         } else {
           result(textureId)
         }
@@ -168,11 +182,18 @@ class UvcCameraManager: NSObject {
     devices = session.devices
   }
 
-  func initialize(preferExternal: Bool, completion: @escaping (Int64?, Error?) -> Void) {
+  func initialize(preferExternal: Bool, deviceId: String?, completion: @escaping (Int64?, Error?) -> Void) {
     self.preferExternal = preferExternal
     refreshDevices()
 
-    guard let device = selectDevice() else {
+    let device: AVCaptureDevice?
+    if let deviceId = deviceId {
+      device = devices.first(where: { $0.uniqueID == deviceId })
+    } else {
+      device = selectDevice()
+    }
+
+    guard let device = device else {
       completion(nil, NSError(domain: "UvcCamera", code: 1, userInfo: [
         NSLocalizedDescriptionKey: "未找到可用摄像头",
       ]))
@@ -254,6 +275,21 @@ class UvcCameraManager: NSObject {
     }
     let next = devices[(idx + 1) % devices.count]
     setupSession(device: next, completion: completion)
+  }
+
+  func selectDevice(deviceId: String, completion: @escaping (Int64?, Error?) -> Void) {
+    refreshDevices()
+    guard let device = devices.first(where: { $0.uniqueID == deviceId }) else {
+      completion(nil, NSError(domain: "UvcCamera", code: 3, userInfo: [
+        NSLocalizedDescriptionKey: "未找到指定摄像头",
+      ]))
+      return
+    }
+    if currentDevice?.uniqueID == deviceId {
+      completion(texture?.textureId, nil)
+      return
+    }
+    setupSession(device: device, completion: completion)
   }
 
   func takePicture(completion: @escaping (String?, Error?) -> Void) {

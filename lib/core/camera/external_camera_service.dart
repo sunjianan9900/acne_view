@@ -55,16 +55,22 @@ class ExternalCameraService implements CameraService {
     await listDevices();
     _textureId = await UvcCamera.initialize(
       preferExternal: preferredDeviceId == null,
+      deviceId: preferredDeviceId,
     );
     _initialized = _textureId >= 0;
 
-    if (_initialized) {
-      final external = _devices.where((d) => d.isExternal);
-      if (external.isNotEmpty) {
-        _currentDeviceId = external.first.id;
-      } else if (_devices.isNotEmpty) {
-        _currentDeviceId = _devices.first.id;
-      }
+    if (!_initialized) return;
+
+    if (preferredDeviceId != null) {
+      _currentDeviceId = preferredDeviceId;
+      return;
+    }
+
+    final external = _devices.where((d) => d.isExternal);
+    if (external.isNotEmpty) {
+      _currentDeviceId = external.first.id;
+    } else if (_devices.isNotEmpty) {
+      _currentDeviceId = _devices.first.id;
     }
   }
 
@@ -84,6 +90,17 @@ class ExternalCameraService implements CameraService {
       throw Exception('相机未初始化');
     }
     return UvcCamera.takePicture();
+  }
+
+  @override
+  Future<void> selectDevice(String deviceId) async {
+    if (_currentDeviceId == deviceId && isInitialized) return;
+    _textureId = await UvcCamera.selectDevice(deviceId);
+    _initialized = _textureId >= 0;
+    if (_initialized) {
+      _currentDeviceId = deviceId;
+    }
+    await listDevices();
   }
 
   Future<void> switchCamera() async {

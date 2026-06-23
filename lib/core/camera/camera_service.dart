@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 abstract class CameraService {
   Future<List<CameraDeviceInfo>> listDevices();
   Future<void> initialize({String? preferredDeviceId});
+  Future<void> selectDevice(String deviceId);
   Future<void> dispose();
   Future<String> takePicture({int jpegQuality = 85});
   Widget buildPreview();

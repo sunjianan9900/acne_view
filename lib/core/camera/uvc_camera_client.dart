@@ -45,13 +45,20 @@ class UvcCamera {
     return devices.any((d) => d.isExternal);
   }
 
-  static Future<int> initialize({bool preferExternal = true}) async {
+  static Future<int> initialize({
+    bool preferExternal = true,
+    String? deviceId,
+  }) async {
     if (_isIos) {
-      return ios.AcneUvcCameraIos.initialize(preferExternal: preferExternal);
+      return ios.AcneUvcCameraIos.initialize(
+        preferExternal: preferExternal,
+        deviceId: deviceId,
+      );
     }
     if (_isMacOS) {
       return macos.AcneUvcCameraMacos.initialize(
         preferExternal: preferExternal,
+        deviceId: deviceId,
       );
     }
     return -1;
@@ -71,5 +78,11 @@ class UvcCamera {
   static Future<void> switchCamera() async {
     if (_isIos) return ios.AcneUvcCameraIos.switchCamera();
     if (_isMacOS) return macos.AcneUvcCameraMacos.switchCamera();
+  }
+
+  static Future<int> selectDevice(String deviceId) async {
+    if (_isIos) return ios.AcneUvcCameraIos.selectDevice(deviceId);
+    if (_isMacOS) return macos.AcneUvcCameraMacos.selectDevice(deviceId);
+    return -1;
   }
 }

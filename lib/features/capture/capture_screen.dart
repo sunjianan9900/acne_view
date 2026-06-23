@@ -5,13 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/camera/builtin_camera_service.dart';
 import '../../core/camera/camera_factory.dart';
 import '../../core/camera/camera_service.dart';
 import '../../core/camera/external_camera_service.dart';
 import '../../core/providers/camera_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/photo/add_photo_flow.dart';
+import '../../shared/widgets/camera_device_dropdown.dart';
 import 'widgets/capture_viewport.dart';
 
 class CaptureScreen extends ConsumerStatefulWidget {
@@ -28,6 +28,7 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   String? _error;
   String? _capturedPath;
   CameraService? _activeCamera;
+  List<CameraDeviceInfo> _devices = [];
 
   CameraService get _camera => _activeCamera ?? ref.read(cameraServiceProvider);
 
@@ -46,10 +47,12 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     try {
       final camera = _camera;
       await camera.initialize();
+      final devices = await camera.listDevices();
       if (mounted) {
         setState(() {
           _initializing = false;
           _activeCamera = camera;
+          _devices = devices;
         });
       }
     } catch (e) {
@@ -61,10 +64,12 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
         try {
           final fallback = await createFallbackCameraService(primary);
           await fallback.initialize();
+          final devices = await fallback.listDevices();
           if (mounted) {
             setState(() {
               _initializing = false;
               _activeCamera = fallback;
+              _devices = devices;
               _error = null;
             });
           }
@@ -116,20 +121,25 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
     }
   }
 
-  Future<void> _switchCamera() async {
-    final camera = _camera;
+  Future<void> _selectDevice(String deviceId) async {
+    if (deviceId == _camera.currentDevice?.id) return;
     setState(() => _initializing = true);
     try {
-      if (camera is BuiltinCameraService) {
-        await camera.switchCamera();
-      } else if (camera is ExternalCameraService) {
-        await camera.switchCamera();
-        await camera.initialize();
+      await _camera.selectDevice(deviceId);
+      final devices = await _camera.listDevices();
+      if (mounted) {
+        setState(() {
+          _devices = devices;
+          _error = null;
+        });
       }
     } catch (e) {
-      _error = _friendlyCameraError(e);
+      if (mounted) {
+        setState(() => _error = _friendlyCameraError(e));
+      }
+    } finally {
+      if (mounted) setState(() => _initializing = false);
     }
-    if (mounted) setState(() => _initializing = false);
   }
 
   void _confirmPhoto() {
@@ -238,45 +248,22 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
               ? const SizedBox.shrink()
               : CapturePreviewFrame(camera: camera),
         ),
-        if (camera.currentDevice != null)
+        if (_devices.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (camera.hasExternalCamera)
-                  Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryTeal.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      '外接',
-                      style: TextStyle(color: Colors.white70, fontSize: 11),
-                    ),
-                  ),
-                Text(
-                  camera.currentDevice!.name,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+            child: CameraDeviceDropdown(
+              devices: _devices,
+              selectedId: camera.currentDevice?.id,
+              enabled: !_initializing,
+              darkStyle: true,
+              onChanged: _selectDevice,
             ),
           ),
         Padding(
           padding: const EdgeInsets.all(24),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IconButton(
-                onPressed: _initializing ? null : _switchCamera,
-                icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
-                iconSize: 32,
-              ),
               GestureDetector(
                 onTap: _initializing ? null : _takePicture,
                 child: Container(
@@ -295,7 +282,6 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 48),
             ],
           ),
         ),
