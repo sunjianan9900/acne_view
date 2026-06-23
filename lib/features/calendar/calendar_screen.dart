@@ -207,8 +207,7 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visible = checkIns.take(3).toList();
-    final overflow = checkIns.length - visible.length;
+    final labels = _dayCellLabels(checkIns);
 
     return Material(
       color: isToday ? AppTheme.softRose : Colors.white,
@@ -235,48 +234,68 @@ class _DayCell extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Expanded(
-                child: checkIns.isEmpty
+                child: labels.isEmpty
                     ? const SizedBox.shrink()
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (final item in visible)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 3),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
+                    : ClipRect(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (final label in labels)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 3),
+                                  child: _SpotTag(label: label),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.brandPink.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  spotDisplayTitle(item.spot),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelSmall
-                                      ?.copyWith(
-                                        color: AppTheme.brandPink,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                ),
-                              ),
-                            ),
-                          if (overflow > 0)
-                            Text(
-                              '+$overflow',
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(color: AppTheme.textSecondary),
-                            ),
-                        ],
+                            ],
+                          ),
+                        ),
                       ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+List<String> _dayCellLabels(List<CheckInWithSpot> checkIns) {
+  if (checkIns.isEmpty) return const [];
+  if (checkIns.length <= 3) {
+    return [for (final item in checkIns) spotDisplayTitle(item.spot)];
+  }
+  return [
+    spotDisplayTitle(checkIns[0].spot),
+    spotDisplayTitle(checkIns[1].spot),
+    '...',
+  ];
+}
+
+class _SpotTag extends StatelessWidget {
+  const _SpotTag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMore = label == '...';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppTheme.brandPink.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: isMore ? TextAlign.center : TextAlign.start,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: isMore ? AppTheme.textSecondary : AppTheme.brandPink,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
