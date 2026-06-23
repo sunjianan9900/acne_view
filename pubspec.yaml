@@ -28,6 +28,8 @@ dependencies:
   shared_preferences: ^2.5.3
   file_picker: ^10.1.9
   confetti: ^0.8.0
+  archive: ^4.0.9
+  image: ^4.8.0
 
 dev_dependencies:
   flutter_test:

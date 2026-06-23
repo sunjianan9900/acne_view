@@ -69,13 +69,10 @@ class LastPhotoOverlay extends ConsumerWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: Transform.flip(
-                flipX: true,
-                child: Image.file(
-                  File(photoPath),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
+              child: Image.file(
+                File(photoPath),
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
             ),
           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../photo/photo_image_utils.dart';
 import 'camera_service.dart';
 import 'capture_aspect.dart';
 import 'uvc_camera_client.dart';
@@ -89,7 +90,9 @@ class ExternalCameraService implements CameraService {
     if (!isInitialized) {
       throw Exception('相机未初始化');
     }
-    return UvcCamera.takePicture();
+    final path = await UvcCamera.takePicture();
+    await flipImageFileHorizontally(path);
+    return path;
   }
 
   @override

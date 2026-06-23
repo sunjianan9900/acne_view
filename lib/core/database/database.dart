@@ -342,6 +342,12 @@ class AppDatabase extends _$AppDatabase {
     )..where((t) => t.checkInId.equals(checkInId))).getSingleOrNull();
   }
 
+  Future<List<Photo>> getCameraPhotos() {
+    return (select(photos)
+          ..where((t) => t.source.isIn(['builtin', 'external'])))
+        .get();
+  }
+
   Future<int> insertPhoto(PhotosCompanion photo) {
     return into(photos).insert(photo);
   }

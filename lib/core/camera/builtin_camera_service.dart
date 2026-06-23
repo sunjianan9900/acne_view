@@ -1,6 +1,8 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import '../photo/photo_image_utils.dart';
+
 import 'camera_service.dart';
 
 class BuiltinCameraService implements CameraService {
@@ -117,6 +119,7 @@ class BuiltinCameraService implements CameraService {
       throw CameraException('not_initialized', '相机未初始化');
     }
     final file = await _controller!.takePicture();
+    await flipImageFileHorizontally(file.path);
     return file.path;
   }
 
