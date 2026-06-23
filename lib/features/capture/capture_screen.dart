@@ -174,6 +174,15 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
   @override
   Widget build(BuildContext context) {
     final camera = _camera;
+    final latestPhoto = ref.watch(spotThumbnailProvider(widget.spotId));
+    final referencePath = latestPhoto.maybeWhen(
+      data: (photo) => photo?.filePath,
+      orElse: () => null,
+    );
+    final showReferenceOverlay = _error == null &&
+        _capturedPath == null &&
+        !_referencePhotoDismissed &&
+        referencePath != null;
 
     return Focus(
       autofocus: true,
@@ -185,83 +194,80 @@ class _CaptureScreenState extends ConsumerState<CaptureScreen> {
           foregroundColor: Colors.white,
           title: const Text('拍摄痘痘'),
         ),
-        body: _error != null
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.white54,
-                        size: 48,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '相机初始化失败',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleMedium?.copyWith(color: Colors.white),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white54,
-                          height: 1.4,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: _error != null
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.white54,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              '相机初始化失败',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.titleMedium?.copyWith(color: Colors.white),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _error!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            FilledButton(
+                              onPressed: () {
+                                setState(() {
+                                  _error = null;
+                                  _initializing = true;
+                                });
+                                _initCamera();
+                              },
+                              child: const Text('重试'),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: () {
-                          setState(() {
-                            _error = null;
-                            _initializing = true;
-                          });
-                          _initCamera();
-                        },
-                        child: const Text('重试'),
-                      ),
-                    ],
-                  ),
+                    )
+                  : _capturedPath != null
+                  ? _buildPreview()
+                  : _buildCamera(camera),
+            ),
+            if (showReferenceOverlay)
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: LastPhotoOverlay(
+                  photoPath: referencePath,
+                  onDismiss: () =>
+                      setState(() => _referencePhotoDismissed = true),
                 ),
-              )
-            : _capturedPath != null
-            ? _buildPreview()
-            : _buildCamera(camera),
+              ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildCamera(CameraService camera) {
-    final latestPhoto = ref.watch(spotThumbnailProvider(widget.spotId));
-    final referencePath = latestPhoto.maybeWhen(
-      data: (photo) => photo?.filePath,
-      orElse: () => null,
-    );
-    final showReferenceOverlay =
-        !_referencePhotoDismissed && referencePath != null;
-
     return Column(
       children: [
         CaptureViewport(
           loading: _initializing,
           child: _initializing
               ? const SizedBox.shrink()
-              : Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CapturePreviewFrame(camera: camera),
-                    if (showReferenceOverlay)
-                      LastPhotoOverlay(
-                        photoPath: referencePath,
-                        onDismiss: () =>
-                            setState(() => _referencePhotoDismissed = true),
-                      ),
-                  ],
-                ),
+              : CapturePreviewFrame(camera: camera),
         ),
         Padding(
           padding: const EdgeInsets.all(24),
