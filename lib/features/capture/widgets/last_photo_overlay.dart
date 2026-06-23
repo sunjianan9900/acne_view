@@ -79,10 +79,13 @@ class _LastPhotoOverlayState extends State<LastPhotoOverlay> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
-                  child: Image.file(
-                    File(widget.photoPath),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  child: Transform.flip(
+                    flipX: true,
+                    child: Image.file(
+                      File(widget.photoPath),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    ),
                   ),
                 ),
               ),
