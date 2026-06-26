@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -225,6 +226,89 @@ void main() {
 
     expect(find.byType(SpotDetailDialog), findsOneWidget);
     expect(find.text('额头新痘'), findsWidgets);
+  });
+
+  testWidgets('face map marker hover shows and hides photo preview', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    router.go('/');
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final spots = <AcneSpot>[
+      AcneSpot(
+        id: 'spot-hover-1',
+        title: '悬停测试痘',
+        faceRegion: FaceRegion.forehead.id,
+        createdAt: DateTime(2026, 1, 2),
+        note: '',
+        status: SpotStatus.active.id,
+        faceMapX: null,
+        faceMapY: null,
+      ),
+    ];
+    final marker = SpotFaceMarker(
+      id: 'marker-hover-1',
+      spotId: 'spot-hover-1',
+      mapX: 0.5,
+      mapY: 0.25,
+      size: FaceMarkerSize.large.id,
+    );
+    final placed = [PlacedSpotMarker(marker: marker, spot: spots.first)];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cameraServiceProvider.overrideWithValue(BuiltinCameraService()),
+          allSpotsProvider.overrideWith(
+            (ref) => Stream<List<AcneSpot>>.value(spots),
+          ),
+          allPlacedSpotMarkersProvider.overrideWith(
+            (ref) => Stream<List<PlacedSpotMarker>>.value(placed),
+          ),
+          spotThumbnailProvider('spot-hover-1').overrideWith(
+            (ref) async => null,
+          ),
+        ],
+        child: const DoujiApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    await tester.tap(find.text('痘痘地图'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const Key('spot-hover-preview')), findsNothing);
+
+    final mapBox = tester.getRect(find.byType(AggregatedFaceMapWidget));
+    final markerLocal = FaceMapCoordinates.localFromNormalized(
+      0.5,
+      0.25,
+      mapBox.size,
+    );
+    final markerCenter = mapBox.topLeft + markerLocal;
+
+    final gesture = await tester.createGesture(
+      kind: PointerDeviceKind.mouse,
+    );
+    await gesture.addPointer(location: markerCenter);
+    await gesture.moveTo(markerCenter);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byKey(const Key('spot-hover-preview')), findsOneWidget);
+
+    await gesture.moveTo(Offset.zero);
+    await tester.pump();
+
+    expect(find.byKey(const Key('spot-hover-preview')), findsNothing);
   });
 
   testWidgets('desktop home splits timeline and note editor', (tester) async {

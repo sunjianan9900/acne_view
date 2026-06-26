@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Face map hover preview widget and overlay patterns"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Riverpod spotThumbnailProvider for hover photo loading"}
