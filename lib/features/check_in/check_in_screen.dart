@@ -155,6 +155,20 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
       subtitle: '$regionLabel · 记录本次护理与变化',
       showHeader: true,
       actions: [
+        FilledButton.icon(
+          onPressed: _saving ? null : _save,
+          icon: _saving
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.check, size: 18),
+          label: const Text('保存打卡'),
+        ),
         OutlinedButton.icon(
           onPressed: _saving ? null : () => context.pop(),
           icon: const Icon(Icons.arrow_back, size: 18),
@@ -168,26 +182,22 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
               noteController: _noteController,
               selectedPhaseId: _selectedPhaseId,
               treatments: _treatments,
-              saving: _saving,
               onPhaseChanged: (phaseId) =>
                   setState(() => _selectedPhaseId = phaseId),
               onApplyTag: _applyTag,
               onAddTreatment: _addTreatment,
               onRemoveTreatment: _removeTreatment,
-              onSave: _save,
             )
           : _MobileCheckInBody(
               photoPath: widget.photoPath,
               noteController: _noteController,
               selectedPhaseId: _selectedPhaseId,
               treatments: _treatments,
-              saving: _saving,
               onPhaseChanged: (phaseId) =>
                   setState(() => _selectedPhaseId = phaseId),
               onApplyTag: _applyTag,
               onAddTreatment: _addTreatment,
               onRemoveTreatment: _removeTreatment,
-              onSave: _save,
             ),
     );
   }
@@ -199,24 +209,20 @@ class _DesktopCheckInBody extends StatelessWidget {
     required this.noteController,
     required this.selectedPhaseId,
     required this.treatments,
-    required this.saving,
     required this.onPhaseChanged,
     required this.onApplyTag,
     required this.onAddTreatment,
     required this.onRemoveTreatment,
-    required this.onSave,
   });
 
   final String photoPath;
   final TextEditingController noteController;
   final String selectedPhaseId;
   final List<_TreatmentRow> treatments;
-  final bool saving;
   final ValueChanged<String> onPhaseChanged;
   final ValueChanged<String> onApplyTag;
   final VoidCallback onAddTreatment;
   final ValueChanged<int> onRemoveTreatment;
-  final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -235,12 +241,10 @@ class _DesktopCheckInBody extends StatelessWidget {
             noteController: noteController,
             selectedPhaseId: selectedPhaseId,
             treatments: treatments,
-            saving: saving,
             onPhaseChanged: onPhaseChanged,
             onApplyTag: onApplyTag,
             onAddTreatment: onAddTreatment,
             onRemoveTreatment: onRemoveTreatment,
-            onSave: onSave,
           ),
         ),
       ],
@@ -254,24 +258,20 @@ class _MobileCheckInBody extends StatelessWidget {
     required this.noteController,
     required this.selectedPhaseId,
     required this.treatments,
-    required this.saving,
     required this.onPhaseChanged,
     required this.onApplyTag,
     required this.onAddTreatment,
     required this.onRemoveTreatment,
-    required this.onSave,
   });
 
   final String photoPath;
   final TextEditingController noteController;
   final String selectedPhaseId;
   final List<_TreatmentRow> treatments;
-  final bool saving;
   final ValueChanged<String> onPhaseChanged;
   final ValueChanged<String> onApplyTag;
   final VoidCallback onAddTreatment;
   final ValueChanged<int> onRemoveTreatment;
-  final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -285,12 +285,10 @@ class _MobileCheckInBody extends StatelessWidget {
             noteController: noteController,
             selectedPhaseId: selectedPhaseId,
             treatments: treatments,
-            saving: saving,
             onPhaseChanged: onPhaseChanged,
             onApplyTag: onApplyTag,
             onAddTreatment: onAddTreatment,
             onRemoveTreatment: onRemoveTreatment,
-            onSave: onSave,
           ),
         ],
       ),
@@ -332,23 +330,19 @@ class _CheckInForm extends ConsumerWidget {
     required this.noteController,
     required this.selectedPhaseId,
     required this.treatments,
-    required this.saving,
     required this.onPhaseChanged,
     required this.onApplyTag,
     required this.onAddTreatment,
     required this.onRemoveTreatment,
-    required this.onSave,
   });
 
   final TextEditingController noteController;
   final String selectedPhaseId;
   final List<_TreatmentRow> treatments;
-  final bool saving;
   final ValueChanged<String> onPhaseChanged;
   final ValueChanged<String> onApplyTag;
   final VoidCallback onAddTreatment;
   final ValueChanged<int> onRemoveTreatment;
-  final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -425,20 +419,6 @@ class _CheckInForm extends ConsumerWidget {
               ),
             );
           }),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: saving ? null : onSave,
-            child: saving
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text('保存打卡'),
-          ),
         ],
       ),
     );
