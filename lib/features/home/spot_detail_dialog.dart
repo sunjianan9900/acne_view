@@ -13,6 +13,8 @@ import '../../shared/models/acne_phase.dart';
 import '../../shared/models/spot_display.dart';
 import '../../shared/models/spot_status.dart';
 import '../../shared/models/treatment_type.dart';
+import '../../shared/photo/add_photo_flow.dart';
+import '../../shared/photo/photo_export.dart';
 import '../../shared/photo/photo_viewer.dart';
 import '../check_in/check_in_detail_dialog.dart';
 
@@ -132,6 +134,22 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
     if (mounted) {
       ref.invalidate(spotTimelineProvider(spot.id));
     }
+  }
+
+  Future<void> _continueAddCheckIn(AcneSpot spot) async {
+    await showAddPhotoOptions(context, spot.id);
+    if (!mounted) return;
+
+    ref.invalidate(spotTimelineProvider(spot.id));
+    ref.invalidate(spotThumbnailProvider(spot.id));
+
+    final items = await ref.read(spotTimelineProvider(spot.id).future);
+    if (!mounted || items.isEmpty) return;
+
+    setState(() {
+      _currentCheckInId = items.first.checkIn.id;
+      _pageDirection = 1;
+    });
   }
 
   Future<void> _deleteCurrentCheckIn(AcneSpot spot) async {
@@ -332,6 +350,17 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
           onPressed: () => _showEditCurrentRecord(spot),
         ),
         const SizedBox(width: 12),
+        FilledButton.icon(
+          onPressed: () => _continueAddCheckIn(spot),
+          icon: const Icon(Icons.add_a_photo_outlined, size: 20),
+          label: const Text('继续添加'),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppTheme.primaryTeal,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+        const SizedBox(width: 12),
         _RoundIconButton(
           icon: Icons.close_rounded,
           onPressed: () => Navigator.of(context).pop(),
@@ -408,6 +437,12 @@ class _SpotDetailDialogState extends ConsumerState<SpotDetailDialog> {
                                   if (filePath == null) return;
                                   showPhotoViewer(context, filePath);
                                 },
+                                onExportImage: () {
+                                  final filePath =
+                                      selectedItem?.photo?.filePath;
+                                  if (filePath == null) return;
+                                  exportPhotoFile(context, filePath);
+                                },
                                 direction: _pageDirection,
                               ),
                             ),
@@ -467,6 +502,7 @@ class _HeroPhotoPanel extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onOpenImage,
+    required this.onExportImage,
     required this.direction,
   });
 
@@ -475,6 +511,7 @@ class _HeroPhotoPanel extends StatelessWidget {
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
   final VoidCallback onOpenImage;
+  final VoidCallback onExportImage;
   final int direction;
 
   @override
@@ -501,6 +538,7 @@ class _HeroPhotoPanel extends StatelessWidget {
         onPrevious: onPrevious,
         onNext: onNext,
         onOpenImage: onOpenImage,
+        onExportImage: onExportImage,
       ),
     );
   }
@@ -514,6 +552,7 @@ class _HeroPhotoContent extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onOpenImage,
+    required this.onExportImage,
   });
 
   final AcneSpot spot;
@@ -521,6 +560,7 @@ class _HeroPhotoContent extends StatelessWidget {
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
   final VoidCallback onOpenImage;
+  final VoidCallback onExportImage;
 
   @override
   Widget build(BuildContext context) {
@@ -584,7 +624,16 @@ class _HeroPhotoContent extends StatelessWidget {
             Positioned(
               right: 18,
               bottom: 18,
-              child: _ZoomButton(onPressed: onOpenImage),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (photoPath != null && File(photoPath).existsSync()) ...[
+                    _DownloadButton(onPressed: onExportImage),
+                    const SizedBox(width: 8),
+                  ],
+                  _ZoomButton(onPressed: onOpenImage),
+                ],
+              ),
             ),
             Positioned(
               left: 18,
@@ -806,8 +855,8 @@ class _DetailStack extends ConsumerWidget {
     final fallback = _fallbackPhaseInfo(status, allPhases);
     final displayPhase = phaseInfo ?? fallback;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ListView(
+      padding: EdgeInsets.zero,
       children: [
         _InfoCard(
           icon: Icons.event_note_rounded,
@@ -1321,6 +1370,26 @@ class _ZoomButton extends StatelessWidget {
       onPressed: onPressed,
       icon: const Icon(Icons.zoom_in_rounded, size: 18),
       label: const Text('点击放大'),
+      style: FilledButton.styleFrom(
+        backgroundColor: Colors.black.withValues(alpha: 0.35),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+}
+
+class _DownloadButton extends StatelessWidget {
+  const _DownloadButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.tonalIcon(
+      onPressed: onPressed,
+      icon: const Icon(Icons.download_rounded, size: 18),
+      label: const Text('导出'),
       style: FilledButton.styleFrom(
         backgroundColor: Colors.black.withValues(alpha: 0.35),
         foregroundColor: Colors.white,

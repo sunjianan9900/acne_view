@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'photo_export.dart';
+
 Future<void> showPhotoViewer(BuildContext context, String filePath) {
   return Navigator.of(context).push(
     MaterialPageRoute<void>(
@@ -55,6 +57,13 @@ class PhotoViewerScreen extends StatelessWidget {
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
             title: const Text('照片详情'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.download_rounded),
+                tooltip: '导出照片',
+                onPressed: () => exportPhotoFile(context, filePath),
+              ),
+            ],
           ),
           body: InteractiveViewer(
             minScale: 0.5,
