@@ -117,6 +117,9 @@ class _CheckInScreenState extends ConsumerState<CheckInScreen> {
             note: _noteController.text,
           );
 
+      ref.invalidate(spotTimelineProvider(widget.spotId));
+      ref.invalidate(spotThumbnailProvider(widget.spotId));
+
       if (mounted) {
         ref.read(selectedHomeSpotIdProvider.notifier).state = widget.spotId;
         ScaffoldMessenger.of(

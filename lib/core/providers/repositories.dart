@@ -172,44 +172,48 @@ class CheckInRepository {
     final checkInId = _uuid.v4();
     final now = checkInDate ?? DateTime.now();
 
-    await _db.insertCheckIn(
-      CheckInRecordsCompanion.insert(
-        id: checkInId,
-        spotId: spotId,
-        checkInDate: now,
-        note: Value(note),
-        phase: Value(phaseId),
-      ),
-    );
-
-    for (final treatment in treatments) {
-      if (treatment.name.trim().isEmpty) continue;
-      await _db.insertTreatment(
-        TreatmentItemsCompanion.insert(
-          id: _uuid.v4(),
-          checkInId: checkInId,
-          type: treatment.type.id,
-          name: treatment.name.trim(),
-          dosage: Value(treatment.dosage),
-        ),
-      );
-    }
-
+    // 先落盘照片，再在事务内写入打卡与照片记录，避免 watchCheckInsForSpot
+    // 在 insertPhoto 完成前触发刷新，导致时间线缓存了 photo=null 的状态。
     final savedPath = await PhotoStorage.savePhoto(
       spotId: spotId,
       sourcePath: photoSourcePath,
       capturedAt: now,
     );
 
-    await _db.insertPhoto(
-      PhotosCompanion.insert(
-        id: _uuid.v4(),
-        checkInId: checkInId,
-        filePath: savedPath,
-        capturedAt: now,
-        source: Value(source.id),
-      ),
-    );
+    await _db.transaction(() async {
+      await _db.insertCheckIn(
+        CheckInRecordsCompanion.insert(
+          id: checkInId,
+          spotId: spotId,
+          checkInDate: now,
+          note: Value(note),
+          phase: Value(phaseId),
+        ),
+      );
+
+      for (final treatment in treatments) {
+        if (treatment.name.trim().isEmpty) continue;
+        await _db.insertTreatment(
+          TreatmentItemsCompanion.insert(
+            id: _uuid.v4(),
+            checkInId: checkInId,
+            type: treatment.type.id,
+            name: treatment.name.trim(),
+            dosage: Value(treatment.dosage),
+          ),
+        );
+      }
+
+      await _db.insertPhoto(
+        PhotosCompanion.insert(
+          id: _uuid.v4(),
+          checkInId: checkInId,
+          filePath: savedPath,
+          capturedAt: now,
+          source: Value(source.id),
+        ),
+      );
+    });
 
     return checkInId;
   }

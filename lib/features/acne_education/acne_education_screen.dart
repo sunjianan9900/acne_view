@@ -6,6 +6,7 @@ import '../../shared/widgets/douji_shell.dart';
 
 /// 科普图原始图片
 const _educationImages = <String>[
+  'assets/ance/00.png',
   'assets/ance/01.jpeg',
   'assets/ance/02.jpeg',
   'assets/ance/03.jpeg',

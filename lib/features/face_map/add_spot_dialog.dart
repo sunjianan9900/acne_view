@@ -42,7 +42,15 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
   String? _selectedMarkerId;
   String? _draggingMarkerId;
   Size _canvasSize = const Size(520, 360);
+  late FaceRegion _selectedRegion;
+  bool _regionManuallySet = false;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRegion = widget.initialRegion ?? FaceRegion.forehead;
+  }
 
   @override
   void dispose() {
@@ -60,6 +68,7 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
     setState(() {
       _draftMarkers.add(FaceMapMarkerData(id: id, mapX: x, mapY: y, size: size));
       _selectedMarkerId = id;
+      _syncRegionFromMarkers();
     });
   }
 
@@ -68,6 +77,7 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
     if (index < 0) return;
     setState(() {
       _draftMarkers[index] = _draftMarkers[index].copyWith(mapX: x, mapY: y);
+      _syncRegionFromMarkers();
     });
   }
 
@@ -77,6 +87,12 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
     setState(() {
       _draftMarkers.removeWhere((m) => m.id == id);
       _selectedMarkerId = null;
+      if (_draftMarkers.isEmpty) {
+        _regionManuallySet = false;
+        _selectedRegion = widget.initialRegion ?? FaceRegion.forehead;
+      } else {
+        _syncRegionFromMarkers();
+      }
     });
   }
 
@@ -110,7 +126,7 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
     _addDraftMarker(normalized.dx, normalized.dy, _pendingAddSize);
   }
 
-  FaceRegion _resolveRegion() {
+  FaceRegion _regionFromMarkers() {
     if (_draftMarkers.isEmpty) {
       return widget.initialRegion ?? FaceRegion.forehead;
     }
@@ -125,6 +141,11 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
         FaceRegion.forehead;
   }
 
+  void _syncRegionFromMarkers() {
+    if (_regionManuallySet || _draftMarkers.isEmpty) return;
+    _selectedRegion = _regionFromMarkers();
+  }
+
   Future<void> _create() async {
     if (_draftMarkers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -137,7 +158,7 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
     try {
       final repo = ref.read(spotRepositoryProvider);
       final spotId = await repo.createSpot(
-        region: _resolveRegion(),
+        region: _selectedRegion,
         title: _titleController.text,
         note: _noteController.text,
       );
@@ -244,6 +265,35 @@ class _AddSpotDialogState extends ConsumerState<AddSpotDialog> {
                     labelText: '标题（可选）',
                     hintText: '例如：鼻子左侧',
                   ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<FaceRegion>(
+                  key: ValueKey(_selectedRegion),
+                  initialValue: _selectedRegion,
+                  decoration: InputDecoration(
+                    labelText: '区域',
+                    helperText: _regionManuallySet
+                        ? null
+                        : '根据面部标记自动识别，可手动调整',
+                    helperMaxLines: 2,
+                  ),
+                  items: FaceRegion.values
+                      .map(
+                        (r) => DropdownMenuItem(
+                          value: r,
+                          child: Text(r.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _saving
+                      ? null
+                      : (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _selectedRegion = value;
+                            _regionManuallySet = true;
+                          });
+                        },
                 ),
                 const SizedBox(height: 10),
                 TextField(

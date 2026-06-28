@@ -8,9 +8,13 @@ export '../../../shared/face_map/face_map_coordinates.dart';
 
 final Map<FaceRegion, Color> faceRegionColors = {
   FaceRegion.forehead: const Color(0xFF8FD3F4),
+  FaceRegion.leftEye: const Color(0xFFB8C5E8),
+  FaceRegion.rightEye: const Color(0xFFC5B8E8),
   FaceRegion.leftCheek: const Color(0xFFAED9D6),
   FaceRegion.rightCheek: const Color(0xFFCDE4D6),
   FaceRegion.nose: const Color(0xFFF0D36B),
+  FaceRegion.upperLip: const Color(0xFFE8A0B4),
+  FaceRegion.mouthCorner: const Color(0xFFF0A898),
   FaceRegion.chin: const Color(0xFFF5B08A),
   FaceRegion.jawline: const Color(0xFFED8F7E),
 };
@@ -104,6 +108,56 @@ class FaceMapPainter extends CustomPainter {
       path.close();
       return path;
     },
+    FaceRegion.leftEye: (s) {
+      final face = _contentRect(s);
+      final path = Path();
+      path.moveTo(face.left + face.width * 0.18, face.top + face.height * 0.28);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.28,
+        face.top + face.height * 0.22,
+        face.left + face.width * 0.38,
+        face.top + face.height * 0.28,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.36,
+        face.top + face.height * 0.36,
+        face.left + face.width * 0.28,
+        face.top + face.height * 0.38,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.20,
+        face.top + face.height * 0.36,
+        face.left + face.width * 0.18,
+        face.top + face.height * 0.28,
+      );
+      path.close();
+      return path;
+    },
+    FaceRegion.rightEye: (s) {
+      final face = _contentRect(s);
+      final path = Path();
+      path.moveTo(face.left + face.width * 0.62, face.top + face.height * 0.28);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.72,
+        face.top + face.height * 0.22,
+        face.left + face.width * 0.82,
+        face.top + face.height * 0.28,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.80,
+        face.top + face.height * 0.36,
+        face.left + face.width * 0.72,
+        face.top + face.height * 0.38,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.64,
+        face.top + face.height * 0.36,
+        face.left + face.width * 0.62,
+        face.top + face.height * 0.28,
+      );
+      path.close();
+      return path;
+    },
     FaceRegion.leftCheek: (s) {
       final face = _contentRect(s);
       final path = Path();
@@ -157,6 +211,64 @@ class FaceMapPainter extends CustomPainter {
         face.top + face.height * 0.55,
         face.left + face.width * 0.42,
         face.top + face.height * 0.46,
+      );
+      path.close();
+      return path;
+    },
+    FaceRegion.upperLip: (s) {
+      final face = _contentRect(s);
+      final path = Path();
+      path.moveTo(face.left + face.width * 0.43, face.top + face.height * 0.56);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.50,
+        face.top + face.height * 0.54,
+        face.left + face.width * 0.57,
+        face.top + face.height * 0.56,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.55,
+        face.top + face.height * 0.63,
+        face.left + face.width * 0.50,
+        face.top + face.height * 0.64,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.45,
+        face.top + face.height * 0.63,
+        face.left + face.width * 0.43,
+        face.top + face.height * 0.56,
+      );
+      path.close();
+      return path;
+    },
+    FaceRegion.mouthCorner: (s) {
+      final face = _contentRect(s);
+      final path = Path();
+      path.moveTo(face.left + face.width * 0.33, face.top + face.height * 0.60);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.36,
+        face.top + face.height * 0.56,
+        face.left + face.width * 0.40,
+        face.top + face.height * 0.60,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.38,
+        face.top + face.height * 0.67,
+        face.left + face.width * 0.33,
+        face.top + face.height * 0.60,
+      );
+      path.close();
+      path.moveTo(face.left + face.width * 0.60, face.top + face.height * 0.60);
+      path.quadraticBezierTo(
+        face.left + face.width * 0.64,
+        face.top + face.height * 0.56,
+        face.left + face.width * 0.67,
+        face.top + face.height * 0.60,
+      );
+      path.quadraticBezierTo(
+        face.left + face.width * 0.62,
+        face.top + face.height * 0.67,
+        face.left + face.width * 0.60,
+        face.top + face.height * 0.60,
       );
       path.close();
       return path;
